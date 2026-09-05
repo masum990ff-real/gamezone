@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GameZone Admin - Login</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4 font-sans">
+<div class="bg-white shadow-lg rounded-xl p-8 w-full max-w-sm">
+<h1 class="text-2xl font-bold text-center text-blue-600 mb-6">GameZone Admin</h1>
+<form id="loginForm" class="space-y-4">
+<input id="email" type="email" required placeholder="Email"
+class="w-full border rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+<input id="password" type="password" required placeholder="Password"
+class="w-full border rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+<button id="loginBtn" type="submit"
+class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl py-2">Login</button>
+<p id="error" class="text-red-600 text-sm text-center hidden"></p>
+</form>
+</div>
+<script src="/js/api.js"></script>
+<script>
+if (Api.getToken()) location.href = "/dashboard.html";
+const form = document.getElementById("loginForm");
+const err = document.getElementById("error");
+const btn = document.getElementById("loginBtn");
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  err.classList.add("hidden");
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  if (!email || !password) {
+    err.textContent = "Email and password required";
+    err.classList.remove("hidden");
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "Logging in...";
+  try {
+    const data = await Api.login(email, password);
+    Api.setToken(data.token);
+    location.href = "/dashboard.html";
+  } catch (ex) {
+    err.textContent = ex.message;
+    err.classList.remove("hidden");
+  }
+  btn.disabled = false;
+  btn.textContent = "Login";
+});
+</script>
+</body>
+</html>
