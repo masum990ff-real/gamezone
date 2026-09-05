@@ -1,5 +1,5 @@
 const express = require("express");
-const { getDb, getMessaging } = require("../config/firebase");
+const { getDb, getMessaging, friendlyFirestoreError } = require("../config/firebase");
 const { ok, fail, authMiddleware } = require("../middleware/auth");
 
 const router = express.Router();
@@ -50,7 +50,7 @@ router.post("/send", authMiddleware, async (req, res) => {
       return ok(res, { id: docRef.id, messageId, successCount }, "Notification sent");
     } catch (e) {
       console.error("History save failed:", e.message);
-      return fail(res, 500, "Push sent but history save failed: " + e.message);
+      return fail(res, 500, "Push sent but history save failed: " + friendlyFirestoreError(e));
     }
   } catch (e) {
     console.error("Send error:", e.message);
@@ -71,7 +71,7 @@ router.get("/history", authMiddleware, async (req, res) => {
     return ok(res, { items, page, limit, total, totalPages: Math.ceil(total / limit) }, "");
   } catch (e) {
     console.error("History load failed:", e.message);
-    return fail(res, 500, "Failed to load history: " + e.message);
+    return fail(res, 500, "Failed to load history: " + friendlyFirestoreError(e));
   }
 });
 
@@ -85,7 +85,7 @@ router.get("/stats", authMiddleware, async (req, res) => {
     return ok(res, { devices: t.data().count, notifications: n.data().count }, "");
   } catch (e) {
     console.error("Stats load failed:", e.message);
-    return fail(res, 500, "Failed to load stats: " + e.message);
+    return fail(res, 500, "Failed to load stats: " + friendlyFirestoreError(e));
   }
 });
 
