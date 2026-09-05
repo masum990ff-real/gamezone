@@ -21,4 +21,19 @@ function authMiddleware(req, res, next) {
   }
 }
 
-module.exports = { ok, fail, authMiddleware };
+async function firebaseAuthMiddleware(req, res, next) {
+  try {
+    const header = req.headers.authorization || "";
+    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+    if (!token) return fail(res, 401, "Login required");
+    const { getApp } = require("../config/firebase");
+    const decoded = await getApp().auth().verifyIdToken(token);
+    req.user = decoded;
+    next();
+  } catch (e) {
+    console.error("ID token verify failed:", e.message);
+    return fail(res, 401, "Invalid login session");
+  }
+}
+
+module.exports = { ok, fail, authMiddleware, firebaseAuthMiddleware };
