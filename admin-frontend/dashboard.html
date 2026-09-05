@@ -6,52 +6,129 @@
 <title>GameZone Admin - Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans">
+<body class="bg-gray-50 min-h-screen font-sans text-gray-800">
 <div class="flex min-h-screen">
-<button id="menuBtn" class="md:hidden fixed top-4 left-4 z-20 bg-blue-600 text-white rounded-xl px-3 py-2">☰</button>
-<aside id="sidebar" class="hidden md:flex flex-col w-64 bg-white shadow-md fixed md:static inset-y-0 left-0 z-10 p-6 space-y-2">
-<h2 class="text-xl font-bold text-blue-600 mb-6">GameZone</h2>
-<a href="/dashboard.html" class="block px-4 py-2 rounded-xl bg-blue-600 text-white font-medium">Dashboard</a>
-<a href="/send-notification.html" class="block px-4 py-2 rounded-xl hover:bg-gray-100">Send Notification</a>
-<a href="/history.html" class="block px-4 py-2 rounded-xl hover:bg-gray-100">History</a>
-<button onclick="Api.logout()" class="text-left px-4 py-2 rounded-xl hover:bg-gray-100 text-red-600 mt-auto">Logout</button>
+<button id="menuBtn" class="md:hidden fixed top-4 left-4 z-20 bg-blue-600 text-white rounded-xl px-3 py-2 shadow">☰</button>
+<aside id="sidebar" class="hidden md:flex flex-col w-64 shrink-0 bg-white shadow-md fixed md:static inset-y-0 left-0 z-10 p-6">
+<div class="flex items-center gap-2 mb-8">
+<div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">G</div>
+<h2 class="text-xl font-bold text-blue-600">GameZone</h2>
+</div>
+<nav class="space-y-1">
+<a href="/dashboard.html" class="block px-4 py-2.5 rounded-xl bg-blue-600 text-white font-medium">Dashboard</a>
+<a href="/send-notification.html" class="block px-4 py-2.5 rounded-xl hover:bg-gray-100 font-medium">Send Notification</a>
+<a href="/history.html" class="block px-4 py-2.5 rounded-xl hover:bg-gray-100 font-medium">History</a>
+</nav>
+<button onclick="Api.logout()" class="text-left px-4 py-2.5 rounded-xl hover:bg-red-50 text-red-600 font-medium mt-auto">Logout</button>
 </aside>
-<main class="flex-1 p-6 md:p-10 pt-16 md:pt-10">
-<h1 class="text-2xl font-bold mb-6">Dashboard</h1>
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
-<div class="bg-white shadow-md rounded-xl p-6">
-<p class="text-gray-500 text-sm">Registered devices</p>
-<p id="statDevices" class="text-3xl font-bold">–</p>
+<div id="overlay" class="hidden fixed inset-0 bg-black/30 z-[5] md:hidden"></div>
+
+<main class="flex-1 p-6 md:p-10 pt-16 md:pt-10 w-full max-w-4xl mx-auto">
+<div class="flex items-center justify-between mb-6">
+<div>
+<h1 class="text-2xl font-bold">Dashboard</h1>
+<p class="text-sm text-gray-500 mt-1">Push notification overview</p>
 </div>
-<div class="bg-white shadow-md rounded-xl p-6">
-<p class="text-gray-500 text-sm">Notifications sent</p>
-<p id="statNotifications" class="text-3xl font-bold">–</p>
+<button id="refreshBtn" class="bg-white shadow-md rounded-xl px-4 py-2 text-sm font-medium hover:bg-gray-50">Refresh</button>
+</div>
+
+<div id="errorCard" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-4">
+<span id="errorText"></span>
+<button id="retryBtn" class="ml-2 font-semibold underline">Retry</button>
+</div>
+
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-white shadow-md rounded-xl p-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+</div>
+<div class="min-w-0">
+<p class="text-gray-500 text-xs sm:text-sm truncate">Registered devices</p>
+<p id="statDevices" class="text-2xl sm:text-3xl font-bold animate-pulse text-gray-300">–</p>
 </div>
 </div>
-<div class="flex flex-col sm:flex-row gap-4 mt-6">
-<a href="/send-notification.html" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl px-6 py-3 text-center">Send Notification</a>
-<a href="/history.html" class="bg-white shadow-md rounded-xl px-6 py-3 text-center font-medium">View History</a>
 </div>
-<p id="error" class="text-red-600 text-sm mt-4 hidden"></p>
+<div class="bg-white shadow-md rounded-xl p-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+</div>
+<div class="min-w-0">
+<p class="text-gray-500 text-xs sm:text-sm truncate">Notifications sent</p>
+<p id="statNotifications" class="text-2xl sm:text-3xl font-bold animate-pulse text-gray-300">–</p>
+</div>
+</div>
+</div>
+</div>
+
+<div class="flex flex-col sm:flex-row gap-3 mt-5">
+<a href="/send-notification.html" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl px-6 py-3.5 text-center shadow">Send Notification</a>
+<a href="/history.html" class="flex-1 bg-white shadow-md hover:bg-gray-50 rounded-xl px-6 py-3.5 text-center font-semibold">View History</a>
+</div>
+
+<div class="bg-white shadow-md rounded-xl mt-5 overflow-hidden">
+<div class="flex items-center justify-between px-5 py-4 border-b">
+<h2 class="font-bold">Recent notifications</h2>
+<a href="/history.html" class="text-sm text-blue-600 font-medium">See all</a>
+</div>
+<ul id="recentList" class="divide-y">
+<li class="px-5 py-4 text-sm text-gray-400">Loading…</li>
+</ul>
+</div>
 </main>
 </div>
 <script src="/js/api.js"></script>
 <script>
 Api.requireAuth();
-document.getElementById("menuBtn").addEventListener("click", () => {
-  document.getElementById("sidebar").classList.toggle("hidden");
-});
-(async () => {
+const sidebar = document.getElementById("sidebar");
+const overlay = document.getElementById("overlay");
+function toggleMenu(force) {
+  const show = force !== undefined ? force : sidebar.classList.contains("hidden");
+  sidebar.classList.toggle("hidden", !show);
+  overlay.classList.toggle("hidden", !show);
+}
+document.getElementById("menuBtn").addEventListener("click", () => toggleMenu());
+overlay.addEventListener("click", () => toggleMenu(false));
+
+function showError(msg) {
+  document.getElementById("errorText").textContent = msg;
+  document.getElementById("errorCard").classList.remove("hidden");
+}
+function hideError() {
+  document.getElementById("errorCard").classList.add("hidden");
+}
+function escapeHtml(s) {
+  return String(s || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+async function load() {
+  hideError();
+  const dEl = document.getElementById("statDevices");
+  const nEl = document.getElementById("statNotifications");
+  dEl.classList.add("animate-pulse");
+  nEl.classList.add("animate-pulse");
   try {
-    const s = await Api.getStats();
-    document.getElementById("statDevices").textContent = s.devices;
-    document.getElementById("statNotifications").textContent = s.notifications;
+    const [s, h] = await Promise.all([Api.getStats(), Api.getHistory(1, 5)]);
+    dEl.classList.remove("animate-pulse", "text-gray-300");
+    nEl.classList.remove("animate-pulse", "text-gray-300");
+    dEl.textContent = s.devices;
+    nEl.textContent = s.notifications;
+    document.getElementById("recentList").innerHTML = h.items.map((n) => `
+      <li class="px-5 py-3.5">
+        <p class="font-semibold text-sm">${escapeHtml(n.title)}</p>
+        <p class="text-xs text-gray-500 truncate mt-0.5">${escapeHtml(n.body)}</p>
+        <p class="text-xs text-gray-400 mt-1">${new Date(n.sentAt).toLocaleString()} · Reach ~${n.successCount}</p>
+      </li>`).join("") || `<li class="px-5 py-6 text-center text-sm text-gray-400">No notifications sent yet — send your first one!</li>`;
   } catch (e) {
-    const err = document.getElementById("error");
-    err.textContent = e.message;
-    err.classList.remove("hidden");
+    dEl.classList.remove("animate-pulse");
+    nEl.classList.remove("animate-pulse");
+    showError(e.message);
   }
-})();
+}
+document.getElementById("refreshBtn").addEventListener("click", load);
+document.getElementById("retryBtn").addEventListener("click", load);
+load();
 </script>
 </body>
 </html>
