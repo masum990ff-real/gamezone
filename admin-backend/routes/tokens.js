@@ -1,5 +1,5 @@
 const express = require("express");
-const { getDb } = require("../config/firebase");
+const { getDb, friendlyFirestoreError } = require("../config/firebase");
 const { ok, fail, authMiddleware } = require("../middleware/auth");
 
 const router = express.Router();
@@ -23,7 +23,7 @@ router.post("/register-token", async (req, res) => {
     return ok(res, {}, "Token registered");
   } catch (e) {
     console.error("Token register failed:", e.message);
-    return fail(res, 500, "Failed to register token: " + e.message);
+    return fail(res, 500, "Failed to register token: " + friendlyFirestoreError(e));
   }
 });
 
