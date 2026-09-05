@@ -58,6 +58,10 @@ const Api = (() => {
     getHistory: (page, limit) =>
       request(`/api/notifications/history?page=${page || 1}&limit=${limit || 20}`),
     getStats: () => request("/api/notifications/stats"),
+    getUsers: () => request("/api/users?limit=100"),
+    banUser: (uid, reason) =>
+      request(`/api/users/${uid}/ban`, { method: "POST", body: JSON.stringify({ reason: reason || "" }) }),
+    unbanUser: (uid) => request(`/api/users/${uid}/unban`, { method: "POST", body: "{}" }),
     getHealth: () => fetch("/api/health").then((r) => r.json()),
   };
 })();
