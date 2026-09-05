@@ -12,6 +12,9 @@ router.post("/send", authMiddleware, async (req, res) => {
     if (title.length > 100 || body.length > 500) {
       return fail(res, 400, "Title max 100 chars, body max 500 chars");
     }
+    if (imageUrl && !/^https:\/\/.+/i.test(imageUrl)) {
+      return fail(res, 400, "Image URL must start with https://");
+    }
 
     const notification = { title, body };
     if (imageUrl) notification.imageUrl = imageUrl;
@@ -19,8 +22,11 @@ router.post("/send", authMiddleware, async (req, res) => {
     const message = {
       topic: TOPIC,
       notification,
-      android: { priority: "high", notification: { sound: "default" } },
-      data: { title, body },
+      android: {
+        priority: "high",
+        notification: { sound: "default", image: imageUrl || undefined },
+      },
+      data: { title, body, image: imageUrl || "" },
     };
 
     const messaging = getMessaging();
