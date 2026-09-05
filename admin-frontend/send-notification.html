@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GameZone Admin - Send Notification</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+<div class="flex min-h-screen">
+<button id="menuBtn" class="md:hidden fixed top-4 left-4 z-20 bg-blue-600 text-white rounded-xl px-3 py-2">☰</button>
+<aside id="sidebar" class="hidden md:flex flex-col w-64 bg-white shadow-md fixed md:static inset-y-0 left-0 z-10 p-6 space-y-2">
+<h2 class="text-xl font-bold text-blue-600 mb-6">GameZone</h2>
+<a href="/dashboard.html" class="block px-4 py-2 rounded-xl hover:bg-gray-100">Dashboard</a>
+<a href="/send-notification.html" class="block px-4 py-2 rounded-xl bg-blue-600 text-white font-medium">Send Notification</a>
+<a href="/history.html" class="block px-4 py-2 rounded-xl hover:bg-gray-100">History</a>
+<button onclick="Api.logout()" class="text-left px-4 py-2 rounded-xl hover:bg-gray-100 text-red-600 mt-auto">Logout</button>
+</aside>
+<main class="flex-1 p-6 md:p-10 pt-16 md:pt-10">
+<h1 class="text-2xl font-bold mb-6">Send Notification</h1>
+<form id="sendForm" class="bg-white shadow-md rounded-xl p-6 max-w-xl space-y-4">
+<div>
+<label class="block text-sm font-medium mb-1">Title *</label>
+<input id="title" type="text" required maxlength="100" placeholder="Notification title"
+class="w-full border rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+</div>
+<div>
+<label class="block text-sm font-medium mb-1">Message *</label>
+<textarea id="body" required maxlength="500" rows="4" placeholder="Message body"
+class="w-full border rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"></textarea>
+</div>
+<div>
+<label class="block text-sm font-medium mb-1">Image URL (optional)</label>
+<input id="imageUrl" type="url" placeholder="https://..."
+class="w-full border rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+</div>
+<button id="sendBtn" type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl px-6 py-3">Send to all users</button>
+</form>
+<div id="toast" class="hidden max-w-xl mt-4 rounded-xl px-4 py-3 text-sm font-medium"></div>
+</main>
+</div>
+<script src="/js/api.js"></script>
+<script>
+Api.requireAuth();
+document.getElementById("menuBtn").addEventListener("click", () => {
+  document.getElementById("sidebar").classList.toggle("hidden");
+});
+const form = document.getElementById("sendForm");
+const btn = document.getElementById("sendBtn");
+const toast = document.getElementById("toast");
+function showToast(msg, ok) {
+  toast.textContent = msg;
+  toast.className = "max-w-xl mt-4 rounded-xl px-4 py-3 text-sm font-medium " +
+    (ok ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700");
+}
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const title = document.getElementById("title").value.trim();
+  const body = document.getElementById("body").value.trim();
+  const imageUrl = document.getElementById("imageUrl").value.trim();
+  if (!title || !body) {
+    showToast("Title and message required", false);
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "Sending...";
+  try {
+    const data = await Api.sendNotification(title, body, imageUrl);
+    showToast(`Sent! Reach ~${data.successCount} devices (id: ${data.messageId})`, true);
+    form.reset();
+  } catch (ex) {
+    showToast(ex.message, false);
+  }
+  btn.disabled = false;
+  btn.textContent = "Send to all users";
+});
+</script>
+</body>
+</html>
