@@ -46,4 +46,4 @@ function friendlyFirestoreError(e) {
   return raw;
 }
 
-module.exports = { admin, getDb, getMessaging, friendlyFirestoreError };
+module.exports = { admin, getApp, getDb, getMessaging, friendlyFirestoreError };
