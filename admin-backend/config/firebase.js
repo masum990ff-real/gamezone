@@ -1,4 +1,5 @@
 const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
 const fs = require("fs");
 
 let db = null;
@@ -14,13 +15,18 @@ function loadServiceAccount() {
   return JSON.parse(fs.readFileSync(keyPath, "utf8"));
 }
 
-function getDb() {
-  if (db) return db;
-  admin.initializeApp({
+function getApp() {
+  if (admin.apps.length) return admin.apps[0];
+  return admin.initializeApp({
     credential: admin.credential.cert(loadServiceAccount()),
     projectId: process.env.FIREBASE_PROJECT_ID,
   });
-  db = admin.firestore();
+}
+
+function getDb() {
+  if (db) return db;
+  const databaseId = process.env.FIREBASE_DATABASE_ID || "(default)";
+  db = getFirestore(getApp(), databaseId);
   return db;
 }
 
@@ -32,7 +38,7 @@ function getMessaging() {
 function friendlyFirestoreError(e) {
   const raw = (e && e.message) || "Unknown error";
   if (/NOT_FOUND/i.test(raw)) {
-    return "Firestore database not found — Firebase Console এ gamezone-5 প্রজেক্টে Firestore Database → Create database (production mode) করো। [" + raw + "]";
+    return "Firestore database not found — Console এর database dropdown এ DB-এর নাম (যেমন gamezone-5) দেখে Render এ FIREBASE_DATABASE_ID env এ সেই নাম বসাও। [" + raw + "]";
   }
   if (/PERMISSION_DENIED/i.test(raw)) {
     return "Firestore permission denied — service account key ভুল প্রজেক্টের হতে পারে, Render এর FIREBASE_SERVICE_ACCOUNT_JSON চেক করো। [" + raw + "]";
