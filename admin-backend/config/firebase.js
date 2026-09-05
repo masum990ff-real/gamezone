@@ -29,4 +29,15 @@ function getMessaging() {
   return admin.messaging();
 }
 
-module.exports = { admin, getDb, getMessaging };
+function friendlyFirestoreError(e) {
+  const raw = (e && e.message) || "Unknown error";
+  if (/NOT_FOUND/i.test(raw)) {
+    return "Firestore database not found — Firebase Console এ gamezone-5 প্রজেক্টে Firestore Database → Create database (production mode) করো। [" + raw + "]";
+  }
+  if (/PERMISSION_DENIED/i.test(raw)) {
+    return "Firestore permission denied — service account key ভুল প্রজেক্টের হতে পারে, Render এর FIREBASE_SERVICE_ACCOUNT_JSON চেক করো। [" + raw + "]";
+  }
+  return raw;
+}
+
+module.exports = { admin, getDb, getMessaging, friendlyFirestoreError };
