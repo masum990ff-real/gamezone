@@ -22,7 +22,8 @@ router.post("/register-token", async (req, res) => {
     }
     return ok(res, {}, "Token registered");
   } catch (e) {
-    return fail(res, 500, "Failed to register token");
+    console.error("Token register failed:", e.message);
+    return fail(res, 500, "Failed to register token: " + e.message);
   }
 });
 
