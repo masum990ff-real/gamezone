@@ -17,12 +17,14 @@ app.use("/api/notifications", require("./routes/notifications"));
 
 app.get("/api/health", async (req, res) => {
   try {
-    const db = require("./config/firebase").getDb();
+    const { getDb, friendlyFirestoreError } = require("./config/firebase");
+    const db = getDb();
     const snap = await db.collection("tokens").count().get();
     res.json({ success: true, data: { server: "ok", firestore: "ok", tokens: snap.data().count }, message: "" });
   } catch (e) {
+    const { friendlyFirestoreError } = require("./config/firebase");
     console.error("Health check failed:", e.message);
-    res.status(500).json({ success: false, data: { server: "ok", firestore: "error" }, message: e.message });
+    res.status(500).json({ success: false, data: { server: "ok", firestore: "error" }, message: friendlyFirestoreError(e) });
   }
 });
 
