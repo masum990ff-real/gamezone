@@ -85,11 +85,12 @@ router.get("/history", authMiddleware, async (req, res) => {
 router.get("/stats", authMiddleware, async (req, res) => {
   try {
     const db = getDb();
-    const [t, n] = await Promise.all([
+    const [t, n, u] = await Promise.all([
       db.collection("tokens").count().get(),
       db.collection("notifications_history").count().get(),
+      db.collection("users").count().get(),
     ]);
-    return ok(res, { devices: t.data().count, notifications: n.data().count }, "");
+    return ok(res, { devices: t.data().count, notifications: n.data().count, users: u.data().count }, "");
   } catch (e) {
     console.error("Stats load failed:", e.message);
     return fail(res, 500, "Failed to load stats: " + friendlyFirestoreError(e));
