@@ -24,25 +24,37 @@ router.post("/send", authMiddleware, async (req, res) => {
     };
 
     const messaging = getMessaging();
-    const messageId = await messaging.send(message);
+    let messageId;
+    try {
+      messageId = await messaging.send(message);
+    } catch (e) {
+      console.error("FCM send failed:", e.message);
+      return fail(res, 500, "FCM send failed: " + e.message);
+    }
 
     const db = getDb();
-    const countSnap = await db.collection("tokens").count().get();
-    const successCount = countSnap.data().count;
-    const entry = {
-      title,
-      body,
-      imageUrl: imageUrl || "",
-      sentAt: new Date().toISOString(),
-      successCount,
-      failureCount: 0,
-      sentBy: req.admin.email,
-      messageId,
-    };
-    const docRef = await db.collection("notifications_history").add(entry);
-    return ok(res, { id: docRef.id, messageId, successCount }, "Notification sent");
+    try {
+      const countSnap = await db.collection("tokens").count().get();
+      const successCount = countSnap.data().count;
+      const entry = {
+        title,
+        body,
+        imageUrl: imageUrl || "",
+        sentAt: new Date().toISOString(),
+        successCount,
+        failureCount: 0,
+        sentBy: req.admin.email,
+        messageId,
+      };
+      const docRef = await db.collection("notifications_history").add(entry);
+      return ok(res, { id: docRef.id, messageId, successCount }, "Notification sent");
+    } catch (e) {
+      console.error("History save failed:", e.message);
+      return fail(res, 500, "Push sent but history save failed: " + e.message);
+    }
   } catch (e) {
-    return fail(res, 500, "Failed to send notification");
+    console.error("Send error:", e.message);
+    return fail(res, 500, "Failed to send notification: " + e.message);
   }
 });
 
@@ -58,7 +70,8 @@ router.get("/history", authMiddleware, async (req, res) => {
     const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     return ok(res, { items, page, limit, total, totalPages: Math.ceil(total / limit) }, "");
   } catch (e) {
-    return fail(res, 500, "Failed to load history");
+    console.error("History load failed:", e.message);
+    return fail(res, 500, "Failed to load history: " + e.message);
   }
 });
 
@@ -71,7 +84,8 @@ router.get("/stats", authMiddleware, async (req, res) => {
     ]);
     return ok(res, { devices: t.data().count, notifications: n.data().count }, "");
   } catch (e) {
-    return fail(res, 500, "Failed to load stats");
+    console.error("Stats load failed:", e.message);
+    return fail(res, 500, "Failed to load stats: " + e.message);
   }
 });
 
