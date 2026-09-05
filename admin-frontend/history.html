@@ -5,52 +5,82 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>GameZone Admin - History</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/css/premium.css" />
 </head>
-<body class="bg-gray-50 min-h-screen font-sans">
+<body class="min-h-screen text-slate-800">
+<div class="aurora"><span></span><span></span><span></span></div>
+
 <div class="flex min-h-screen">
-<button id="menuBtn" class="md:hidden fixed top-4 left-4 z-20 bg-blue-600 text-white rounded-xl px-3 py-2">☰</button>
-<aside id="sidebar" class="hidden md:flex flex-col w-64 bg-white shadow-md fixed md:static inset-y-0 left-0 z-10 p-6 space-y-2">
-<h2 class="text-xl font-bold text-blue-600 mb-6">GameZone</h2>
-<a href="/dashboard.html" class="block px-4 py-2 rounded-xl hover:bg-gray-100">Dashboard</a>
-<a href="/send-notification.html" class="block px-4 py-2 rounded-xl hover:bg-gray-100">Send Notification</a>
-<a href="/history.html" class="block px-4 py-2 rounded-xl bg-blue-600 text-white font-medium">History</a>
-<button onclick="Api.logout()" class="text-left px-4 py-2 rounded-xl hover:bg-gray-100 text-red-600 mt-auto">Logout</button>
-</aside>
-<main class="flex-1 p-6 md:p-10 pt-16 md:pt-10">
-<h1 class="text-2xl font-bold mb-1">Notification History</h1>
-<p class="text-sm text-gray-500 mb-6">Newest first</p>
-<div id="errorCard" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-4">
-<span id="errorText"></span>
-<button id="retryBtn" class="ml-2 font-semibold underline">Retry</button>
+<button id="menuBtn" class="md:hidden fixed top-4 left-4 z-20 btn-grad text-white rounded-2xl px-3.5 py-2 font-bold">☰</button>
+<aside id="sidebar" class="hidden md:flex flex-col w-64 shrink-0 fixed md:static inset-y-0 left-0 z-10 p-6 text-white" style="background: linear-gradient(180deg, #0f0b2d, #2e1065 70%, #4c1d95);">
+<div class="flex items-center gap-2.5 mb-10">
+<div class="w-10 h-10 rounded-2xl bg-white text-lg font-extrabold flex items-center justify-center shadow-lg"><span class="grad-text">G</span></div>
+<div>
+<h2 class="text-lg font-extrabold leading-none">GameZone</h2>
+<p class="text-[11px] text-violet-300 mt-1">Admin Panel</p>
 </div>
-<div class="bg-white shadow-md rounded-xl overflow-x-auto">
+</div>
+<nav class="space-y-2 text-sm font-semibold">
+<a href="/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10"/></svg>
+Dashboard</a>
+<a href="/send-notification.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+Send Notification</a>
+<a href="/history.html" class="nav-active flex items-center gap-3 px-4 py-3 rounded-2xl text-white">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+History</a>
+</nav>
+<button onclick="Api.logout()" class="text-left px-4 py-3 rounded-2xl text-rose-300 hover:bg-white/10 font-semibold text-sm mt-auto transition">Logout</button>
+</aside>
+<div id="overlay" class="hidden fixed inset-0 bg-black/40 z-[5] md:hidden"></div>
+
+<main class="flex-1 p-6 md:p-10 pt-16 md:pt-10 w-full max-w-4xl mx-auto">
+<div class="mb-6 anim-in">
+<h1 class="text-2xl md:text-3xl font-extrabold">Notification <span class="grad-text">History</span></h1>
+<p class="text-sm text-slate-500 mt-1">Newest first</p>
+</div>
+
+<div id="errorCard" class="hidden glass border-l-4 !border-l-rose-500 text-rose-700 rounded-2xl px-4 py-3 text-sm mb-4 shadow">
+<span id="errorText"></span>
+<button id="retryBtn" class="ml-2 font-bold underline">Retry</button>
+</div>
+
+<div class="glass shadow-xl rounded-3xl overflow-hidden anim-in d1">
+<div class="overflow-x-auto">
 <table class="w-full text-sm min-w-[640px]">
 <thead>
-<tr class="text-left text-gray-500 border-b">
-<th class="px-4 py-3">Date/Time</th>
-<th class="px-4 py-3">Title</th>
-<th class="px-4 py-3">Message</th>
-<th class="px-4 py-3">Success</th>
-<th class="px-4 py-3">Failure</th>
+<tr class="text-left text-xs uppercase tracking-wide text-violet-500 border-b border-violet-100 bg-violet-50/50">
+<th class="px-5 py-3.5">Date/Time</th>
+<th class="px-5 py-3.5">Title</th>
+<th class="px-5 py-3.5">Message</th>
+<th class="px-5 py-3.5">Reach</th>
 </tr>
 </thead>
-<tbody id="rows"></tbody>
+<tbody id="rows" class="divide-y divide-violet-50"></tbody>
 </table>
 </div>
-<div class="flex items-center justify-between mt-4">
-<button id="prevBtn" class="bg-white shadow-md rounded-xl px-4 py-2 font-medium">← Prev</button>
-<span id="pageInfo" class="text-sm text-gray-500"></span>
-<button id="nextBtn" class="bg-white shadow-md rounded-xl px-4 py-2 font-medium">Next →</button>
 </div>
-<p id="error" class="text-red-600 text-sm mt-4 hidden"></p>
+<div class="flex items-center justify-between mt-4 anim-in d2">
+<button id="prevBtn" class="glass card-lift shadow-lg rounded-2xl px-5 py-2.5 font-bold text-violet-700 text-sm disabled:opacity-40">← Prev</button>
+<span id="pageInfo" class="text-sm text-slate-500 font-medium"></span>
+<button id="nextBtn" class="glass card-lift shadow-lg rounded-2xl px-5 py-2.5 font-bold text-violet-700 text-sm disabled:opacity-40">Next →</button>
+</div>
 </main>
 </div>
 <script src="/js/api.js"></script>
 <script>
 Api.requireAuth();
-document.getElementById("menuBtn").addEventListener("click", () => {
-  document.getElementById("sidebar").classList.toggle("hidden");
-});
+const sidebar = document.getElementById("sidebar");
+const overlay = document.getElementById("overlay");
+function toggleMenu(force) {
+  const show = force !== undefined ? force : sidebar.classList.contains("hidden");
+  sidebar.classList.toggle("hidden", !show);
+  overlay.classList.toggle("hidden", !show);
+}
+document.getElementById("menuBtn").addEventListener("click", () => toggleMenu());
+overlay.addEventListener("click", () => toggleMenu(false));
+
 function showError(msg) {
   document.getElementById("errorText").textContent = msg;
   document.getElementById("errorCard").classList.remove("hidden");
@@ -63,22 +93,23 @@ const limit = 20;
 let totalPages = 1;
 async function load() {
   hideError();
-  document.getElementById("rows").innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">Loading…</td></tr>`;
+  document.getElementById("rows").innerHTML = [1, 2, 3].map(() =>
+    `<tr><td colspan="4" class="px-5 py-4"><div class="shimmer h-5">&nbsp;</div></td></tr>`).join("");
   try {
     const data = await Api.getHistory(page, limit);
     totalPages = data.totalPages || 1;
     document.getElementById("pageInfo").textContent = `Page ${data.page} of ${totalPages} (${data.total})`;
     document.getElementById("rows").innerHTML = data.items.map((n) => `
-      <tr class="border-b last:border-0">
-        <td class="px-4 py-3 whitespace-nowrap">${new Date(n.sentAt).toLocaleString()}</td>
-        <td class="px-4 py-3 font-medium">${escapeHtml(n.title)}</td>
-        <td class="px-4 py-3 max-w-[240px] truncate">${escapeHtml(n.body)}</td>
-        <td class="px-4 py-3 text-green-600 font-semibold">${n.successCount}</td>
-        <td class="px-4 py-3 text-red-600 font-semibold">${n.failureCount}</td>
-      </tr>`).join("") || `<tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">No notifications yet</td></tr>`;
+      <tr class="hover:bg-violet-50/60 transition">
+        <td class="px-5 py-3.5 whitespace-nowrap text-slate-500 text-xs font-medium">${new Date(n.sentAt).toLocaleString()}</td>
+        <td class="px-5 py-3.5 font-bold">${escapeHtml(n.title)}</td>
+        <td class="px-5 py-3.5 max-w-[240px] truncate text-slate-600">${escapeHtml(n.body)}</td>
+        <td class="px-5 py-3.5"><span class="inline-block bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full px-3 py-1">~${n.successCount}</span></td>
+      </tr>`).join("") || `<tr><td colspan="4" class="px-5 py-8 text-center text-sm text-slate-400">No notifications yet</td></tr>`;
     document.getElementById("prevBtn").disabled = page <= 1;
     document.getElementById("nextBtn").disabled = page >= totalPages;
   } catch (e) {
+    document.getElementById("rows").innerHTML = "";
     showError(e.message);
   }
 }
