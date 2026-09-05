@@ -30,6 +30,9 @@ Send Notification</a>
 <a href="/history.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
 History</a>
+<a href="/users.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+Users</a>
 </nav>
 <button onclick="Api.logout()" class="text-left px-4 py-3 rounded-2xl text-rose-300 hover:bg-white/10 font-semibold text-sm mt-auto transition">Logout</button>
 </aside>
@@ -49,7 +52,7 @@ History</a>
 <button id="retryBtn" class="ml-2 font-bold underline">Retry</button>
 </div>
 
-<div class="grid grid-cols-2 gap-4">
+<div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
 <div class="anim-in d1 glass card-lift shadow-xl rounded-3xl p-5 relative overflow-hidden">
 <div class="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-indigo-400/20 blur-xl"></div>
 <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-lg mb-3" style="background: linear-gradient(135deg,#6366f1,#22d3ee);">
@@ -66,6 +69,14 @@ History</a>
 <p class="text-slate-500 text-xs sm:text-sm font-medium">Notifications sent</p>
 <p id="statNotifications" class="text-3xl sm:text-4xl font-extrabold mt-1">–</p>
 </div>
+<a href="/users.html" class="anim-in d3 glass card-lift shadow-xl rounded-3xl p-5 relative overflow-hidden col-span-2 lg:col-span-1">
+<div class="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-emerald-400/20 blur-xl"></div>
+<div class="w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-lg mb-3" style="background: linear-gradient(135deg,#10b981,#3b82f6);">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+</div>
+<p class="text-slate-500 text-xs sm:text-sm font-medium">Total users</p>
+<p id="statUsers" class="text-3xl sm:text-4xl font-extrabold mt-1">–</p>
+</a>
 </div>
 
 <div class="flex flex-col sm:flex-row gap-3 mt-5 anim-in d3">
@@ -122,14 +133,18 @@ async function load() {
   hideError();
   const dEl = document.getElementById("statDevices");
   const nEl = document.getElementById("statNotifications");
+  const uEl = document.getElementById("statUsers");
   dEl.classList.add("shimmer");
   nEl.classList.add("shimmer");
+  uEl.classList.add("shimmer");
   try {
     const [s, h] = await Promise.all([Api.getStats(), Api.getHistory(1, 5)]);
     dEl.classList.remove("shimmer");
     nEl.classList.remove("shimmer");
+    uEl.classList.remove("shimmer");
     countUp(dEl, s.devices);
     countUp(nEl, s.notifications);
+    countUp(uEl, s.users || 0);
     document.getElementById("recentList").innerHTML = h.items.map((n) => `
       <li class="px-5 py-3.5 flex gap-3 items-start">
         <span class="mt-1.5 w-2.5 h-2.5 rounded-full shrink-0" style="background: var(--grad);"></span>
@@ -142,6 +157,7 @@ async function load() {
   } catch (e) {
     dEl.classList.remove("shimmer");
     nEl.classList.remove("shimmer");
+    uEl.classList.remove("shimmer");
     showError(e.message);
   }
 }
