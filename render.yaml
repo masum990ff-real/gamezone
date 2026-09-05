@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: gamezone-backend
+    runtime: node
+    buildCommand: cd admin-backend && npm install
+    startCommand: cd admin-backend && npm start
+    envVars:
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 12h
+      - key: FIREBASE_PROJECT_ID
+        value: gamezone-5
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
