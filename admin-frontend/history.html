@@ -17,7 +17,12 @@
 <button onclick="Api.logout()" class="text-left px-4 py-2 rounded-xl hover:bg-gray-100 text-red-600 mt-auto">Logout</button>
 </aside>
 <main class="flex-1 p-6 md:p-10 pt-16 md:pt-10">
-<h1 class="text-2xl font-bold mb-6">Notification History</h1>
+<h1 class="text-2xl font-bold mb-1">Notification History</h1>
+<p class="text-sm text-gray-500 mb-6">Newest first</p>
+<div id="errorCard" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-4">
+<span id="errorText"></span>
+<button id="retryBtn" class="ml-2 font-semibold underline">Retry</button>
+</div>
 <div class="bg-white shadow-md rounded-xl overflow-x-auto">
 <table class="w-full text-sm min-w-[640px]">
 <thead>
@@ -46,10 +51,19 @@ Api.requireAuth();
 document.getElementById("menuBtn").addEventListener("click", () => {
   document.getElementById("sidebar").classList.toggle("hidden");
 });
+function showError(msg) {
+  document.getElementById("errorText").textContent = msg;
+  document.getElementById("errorCard").classList.remove("hidden");
+}
+function hideError() {
+  document.getElementById("errorCard").classList.add("hidden");
+}
 let page = 1;
 const limit = 20;
 let totalPages = 1;
 async function load() {
+  hideError();
+  document.getElementById("rows").innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">Loading…</td></tr>`;
   try {
     const data = await Api.getHistory(page, limit);
     totalPages = data.totalPages || 1;
@@ -65,9 +79,7 @@ async function load() {
     document.getElementById("prevBtn").disabled = page <= 1;
     document.getElementById("nextBtn").disabled = page >= totalPages;
   } catch (e) {
-    const err = document.getElementById("error");
-    err.textContent = e.message;
-    err.classList.remove("hidden");
+    showError(e.message);
   }
 }
 function escapeHtml(s) {
@@ -75,6 +87,7 @@ function escapeHtml(s) {
 }
 document.getElementById("prevBtn").addEventListener("click", () => { if (page > 1) { page--; load(); } });
 document.getElementById("nextBtn").addEventListener("click", () => { if (page < totalPages) { page++; load(); } });
+document.getElementById("retryBtn").addEventListener("click", load);
 load();
 </script>
 </body>
