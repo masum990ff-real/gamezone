@@ -58,5 +58,6 @@ const Api = (() => {
     getHistory: (page, limit) =>
       request(`/api/notifications/history?page=${page || 1}&limit=${limit || 20}`),
     getStats: () => request("/api/notifications/stats"),
+    getHealth: () => fetch("/api/health").then((r) => r.json()),
   };
 })();
