@@ -15,7 +15,16 @@ app.use("/api/auth", require("./routes/auth"));
 app.use("/api", require("./routes/tokens"));
 app.use("/api/notifications", require("./routes/notifications"));
 
-app.get("/api/health", (req, res) => res.json({ success: true, data: {}, message: "ok" }));
+app.get("/api/health", async (req, res) => {
+  try {
+    const db = require("./config/firebase").getDb();
+    const snap = await db.collection("tokens").count().get();
+    res.json({ success: true, data: { server: "ok", firestore: "ok", tokens: snap.data().count }, message: "" });
+  } catch (e) {
+    console.error("Health check failed:", e.message);
+    res.status(500).json({ success: false, data: { server: "ok", firestore: "error" }, message: e.message });
+  }
+});
 
 app.use(express.static(path.join(__dirname, "../admin-frontend")));
 
