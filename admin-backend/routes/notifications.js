@@ -4,6 +4,7 @@ const { ok, fail, authMiddleware } = require("../middleware/auth");
 
 const router = express.Router();
 const TOPIC = "all_users";
+const CHANNEL_ID = "gamezone_push_v2";
 
 router.post("/send", authMiddleware, async (req, res) => {
   try {
@@ -24,7 +25,7 @@ router.post("/send", authMiddleware, async (req, res) => {
       notification,
       android: {
         priority: "high",
-        notification: { sound: "default", image: imageUrl || undefined },
+        notification: { sound: "default", image: imageUrl || undefined, channelId: CHANNEL_ID },
       },
       data: { title, body, image: imageUrl || "" },
     };
