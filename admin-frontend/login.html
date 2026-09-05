@@ -5,17 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>GameZone Admin - Login</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/css/premium.css" />
 </head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4 font-sans">
-<div class="bg-white shadow-lg rounded-xl p-8 w-full max-w-sm">
-<h1 class="text-2xl font-bold text-center text-blue-600 mb-6">GameZone Admin</h1>
-<form id="loginForm" class="space-y-4">
+<body class="min-h-screen flex items-center justify-center p-4">
+<div class="aurora"><span></span><span></span><span></span></div>
+
+<div class="glass shadow-2xl rounded-3xl p-8 w-full max-w-sm anim-in relative overflow-hidden">
+<div class="absolute top-0 left-0 right-0 h-1.5" style="background: var(--grad);"></div>
+<div class="flex flex-col items-center mb-6 d1 anim-in">
+<div class="w-14 h-14 rounded-2xl text-white text-2xl font-extrabold flex items-center justify-center shadow-lg" style="background: var(--grad);">G</div>
+<h1 class="text-2xl font-extrabold mt-3">GameZone <span class="grad-text">Admin</span></h1>
+<p class="text-sm text-gray-500 mt-1">Push notification control center</p>
+</div>
+<form id="loginForm" class="space-y-4 d2 anim-in">
 <input id="email" type="email" required placeholder="Email"
-class="w-full border rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+class="field w-full border border-violet-200 rounded-2xl px-4 py-3 bg-white/70" />
 <input id="password" type="password" required placeholder="Password"
-class="w-full border rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+class="field w-full border border-violet-200 rounded-2xl px-4 py-3 bg-white/70" />
 <button id="loginBtn" type="submit"
-class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl py-2">Login</button>
+class="btn-grad w-full text-white font-bold rounded-2xl py-3">Login</button>
 <p id="error" class="text-red-600 text-sm text-center hidden"></p>
 </form>
 </div>
@@ -44,6 +52,9 @@ form.addEventListener("submit", async (e) => {
   } catch (ex) {
     err.textContent = ex.message;
     err.classList.remove("hidden");
+    form.classList.remove("shake");
+    void form.offsetWidth;
+    form.classList.add("shake");
   }
   btn.disabled = false;
   btn.textContent = "Login";
