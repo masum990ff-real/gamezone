@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GameZone Admin - History</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+<div class="flex min-h-screen">
+<button id="menuBtn" class="md:hidden fixed top-4 left-4 z-20 bg-blue-600 text-white rounded-xl px-3 py-2">☰</button>
+<aside id="sidebar" class="hidden md:flex flex-col w-64 bg-white shadow-md fixed md:static inset-y-0 left-0 z-10 p-6 space-y-2">
+<h2 class="text-xl font-bold text-blue-600 mb-6">GameZone</h2>
+<a href="/dashboard.html" class="block px-4 py-2 rounded-xl hover:bg-gray-100">Dashboard</a>
+<a href="/send-notification.html" class="block px-4 py-2 rounded-xl hover:bg-gray-100">Send Notification</a>
+<a href="/history.html" class="block px-4 py-2 rounded-xl bg-blue-600 text-white font-medium">History</a>
+<button onclick="Api.logout()" class="text-left px-4 py-2 rounded-xl hover:bg-gray-100 text-red-600 mt-auto">Logout</button>
+</aside>
+<main class="flex-1 p-6 md:p-10 pt-16 md:pt-10">
+<h1 class="text-2xl font-bold mb-6">Notification History</h1>
+<div class="bg-white shadow-md rounded-xl overflow-x-auto">
+<table class="w-full text-sm min-w-[640px]">
+<thead>
+<tr class="text-left text-gray-500 border-b">
+<th class="px-4 py-3">Date/Time</th>
+<th class="px-4 py-3">Title</th>
+<th class="px-4 py-3">Message</th>
+<th class="px-4 py-3">Success</th>
+<th class="px-4 py-3">Failure</th>
+</tr>
+</thead>
+<tbody id="rows"></tbody>
+</table>
+</div>
+<div class="flex items-center justify-between mt-4">
+<button id="prevBtn" class="bg-white shadow-md rounded-xl px-4 py-2 font-medium">← Prev</button>
+<span id="pageInfo" class="text-sm text-gray-500"></span>
+<button id="nextBtn" class="bg-white shadow-md rounded-xl px-4 py-2 font-medium">Next →</button>
+</div>
+<p id="error" class="text-red-600 text-sm mt-4 hidden"></p>
+</main>
+</div>
+<script src="/js/api.js"></script>
+<script>
+Api.requireAuth();
+document.getElementById("menuBtn").addEventListener("click", () => {
+  document.getElementById("sidebar").classList.toggle("hidden");
+});
+let page = 1;
+const limit = 20;
+let totalPages = 1;
+async function load() {
+  try {
+    const data = await Api.getHistory(page, limit);
+    totalPages = data.totalPages || 1;
+    document.getElementById("pageInfo").textContent = `Page ${data.page} of ${totalPages} (${data.total})`;
+    document.getElementById("rows").innerHTML = data.items.map((n) => `
+      <tr class="border-b last:border-0">
+        <td class="px-4 py-3 whitespace-nowrap">${new Date(n.sentAt).toLocaleString()}</td>
+        <td class="px-4 py-3 font-medium">${escapeHtml(n.title)}</td>
+        <td class="px-4 py-3 max-w-[240px] truncate">${escapeHtml(n.body)}</td>
+        <td class="px-4 py-3 text-green-600 font-semibold">${n.successCount}</td>
+        <td class="px-4 py-3 text-red-600 font-semibold">${n.failureCount}</td>
+      </tr>`).join("") || `<tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">No notifications yet</td></tr>`;
+    document.getElementById("prevBtn").disabled = page <= 1;
+    document.getElementById("nextBtn").disabled = page >= totalPages;
+  } catch (e) {
+    const err = document.getElementById("error");
+    err.textContent = e.message;
+    err.classList.remove("hidden");
+  }
+}
+function escapeHtml(s) {
+  return String(s || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+document.getElementById("prevBtn").addEventListener("click", () => { if (page > 1) { page--; load(); } });
+document.getElementById("nextBtn").addEventListener("click", () => { if (page < totalPages) { page++; load(); } });
+load();
+</script>
+</body>
+</html>
