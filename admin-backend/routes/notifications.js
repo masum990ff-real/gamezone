@@ -1,12 +1,13 @@
 const express = require("express");
 const { getDb, getMessaging, friendlyFirestoreError } = require("../config/firebase");
 const { ok, fail, authMiddleware } = require("../middleware/auth");
+const { sendLimiter } = require("../middleware/rateLimit");
 
 const router = express.Router();
 const TOPIC = "all_users";
 const CHANNEL_ID = "gamezone_push_v2";
 
-router.post("/send", authMiddleware, async (req, res) => {
+router.post("/send", authMiddleware, sendLimiter, async (req, res) => {
   try {
     const { title, body, imageUrl } = req.body || {};
     if (!title || !body) return fail(res, 400, "Title and body required");
