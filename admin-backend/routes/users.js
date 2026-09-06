@@ -1,13 +1,28 @@
 const express = require("express");
-const { getDb, getApp, friendlyFirestoreError } = require("../config/firebase");
+const { FieldValue } = require("firebase-admin/firestore");
+const { getDb, getApp, getRtdb, friendlyFirestoreError } = require("../config/firebase");
 const { ok, fail, authMiddleware, firebaseAuthMiddleware } = require("../middleware/auth");
 const { syncLimiter } = require("../middleware/rateLimit");
 
 const router = express.Router();
 
+router.get("/resolve-refer", syncLimiter, async (req, res) => {
+  try {
+    const code = String(req.query.code || "").trim();
+    if (!code) return fail(res, 400, "Refer code required");
+    const db = getDb();
+    const snap = await db.collection("users").where("username", "==", code).limit(1).get();
+    if (snap.empty) return fail(res, 404, "Invalid refer code");
+    return ok(res, { username: code }, "Valid refer code");
+  } catch (e) {
+    console.error("Resolve refer failed:", e.message);
+    return fail(res, 500, "Failed to check refer code: " + friendlyFirestoreError(e));
+  }
+});
+
 router.post("/sync", firebaseAuthMiddleware, syncLimiter, async (req, res) => {
   try {
-    const { username, phone } = req.body || {};
+    const { username, phone, referCode } = req.body || {};
     if (username && !/^[A-Za-z0-9_]{3,30}$/.test(username)) {
       return fail(res, 400, "Username 3-30 chars, letters/numbers/underscore only");
     }
@@ -16,7 +31,14 @@ router.post("/sync", firebaseAuthMiddleware, syncLimiter, async (req, res) => {
       return fail(res, 400, "Invalid phone number");
     }
     const db = getDb();
-    const ref = db.collection("users").doc(req.user.uid);
+    const usersCol = db.collection("users");
+    if (username) {
+      const dup = await usersCol.where("username", "==", username).limit(1).get();
+      if (!dup.empty && dup.docs[0].id !== req.user.uid) {
+        return fail(res, 400, "Username already taken");
+      }
+    }
+    const ref = usersCol.doc(req.user.uid);
     const snap = await ref.get();
     const now = new Date().toISOString();
     if (snap.exists) {
@@ -25,16 +47,41 @@ router.post("/sync", firebaseAuthMiddleware, syncLimiter, async (req, res) => {
       if (phone !== undefined) update.phone = digits;
       await ref.set(update, { merge: true });
     } else {
-      await ref.set({
+      let bonus = 0;
+      let referrerUid = null;
+      const code = String(referCode || "").trim();
+      const settings = await getRtdb().ref("settings/app").get()
+        .then((s) => (s.exists() ? s.val() : {})).catch(() => ({}));
+      const referCoins = Math.max(0, parseInt(settings.referCoins) || 0);
+      if (code) {
+        if (code === username) return fail(res, 400, "You cannot use your own refer code");
+        const rq = await usersCol.where("username", "==", code).limit(1).get();
+        if (!rq.empty) {
+          referrerUid = rq.docs[0].id;
+          bonus = referCoins;
+        }
+      }
+      const batch = db.batch();
+      batch.set(ref, {
         email: req.user.email || "",
         username: username || "",
         phone: digits,
-        coins: 0,
+        coins: bonus,
         banned: false,
         banReason: "",
         createdAt: now,
         lastActive: now,
       });
+      if (referrerUid && bonus > 0) {
+        batch.update(usersCol.doc(referrerUid), { coins: FieldValue.increment(bonus) });
+        batch.set(db.collection("referrals").doc(req.user.uid), {
+          by: referrerUid,
+          code,
+          coins: bonus,
+          at: now,
+        });
+      }
+      await batch.commit();
     }
     const profile = (await ref.get()).data();
     if (profile.banned) return fail(res, 403, "This account is banned" + (profile.banReason ? ": " + profile.banReason : ""));
