@@ -1,26 +1,34 @@
 const express = require("express");
 const { getDb, getApp, friendlyFirestoreError } = require("../config/firebase");
 const { ok, fail, authMiddleware, firebaseAuthMiddleware } = require("../middleware/auth");
+const { syncLimiter } = require("../middleware/rateLimit");
 
 const router = express.Router();
 
-router.post("/sync", firebaseAuthMiddleware, async (req, res) => {
+router.post("/sync", firebaseAuthMiddleware, syncLimiter, async (req, res) => {
   try {
     const { username, phone } = req.body || {};
+    if (username && !/^[A-Za-z0-9_]{3,30}$/.test(username)) {
+      return fail(res, 400, "Username 3-30 chars, letters/numbers/underscore only");
+    }
+    const digits = String(phone || "").replace(/\D/g, "");
+    if (phone && !/^\d{6,15}$/.test(digits)) {
+      return fail(res, 400, "Invalid phone number");
+    }
     const db = getDb();
     const ref = db.collection("users").doc(req.user.uid);
     const snap = await ref.get();
     const now = new Date().toISOString();
     if (snap.exists) {
       const update = { lastActive: now };
-      if (username) update.username = String(username).slice(0, 30);
-      if (phone !== undefined) update.phone = String(phone).slice(0, 20);
+      if (username) update.username = username;
+      if (phone !== undefined) update.phone = digits;
       await ref.set(update, { merge: true });
     } else {
       await ref.set({
         email: req.user.email || "",
-        username: username ? String(username).slice(0, 30) : "",
-        phone: phone ? String(phone).slice(0, 20) : "",
+        username: username || "",
+        phone: digits,
         banned: false,
         banReason: "",
         createdAt: now,
