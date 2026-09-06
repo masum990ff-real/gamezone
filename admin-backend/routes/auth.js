@@ -2,10 +2,11 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { ok, fail } = require("../middleware/auth");
+const { loginLimiter } = require("../middleware/rateLimit");
 
 const router = express.Router();
 
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {};
     if (!email || !password) return fail(res, 400, "Email and password required");
