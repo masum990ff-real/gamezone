@@ -1,3 +1,4 @@
+
 const admin = require("firebase-admin");
 const { getFirestore } = require("firebase-admin/firestore");
 const fs = require("fs");
@@ -20,6 +21,7 @@ function getApp() {
   return admin.initializeApp({
     credential: admin.credential.cert(loadServiceAccount()),
     projectId: process.env.FIREBASE_PROJECT_ID,
+    databaseURL: process.env.FIREBASE_RTDB_URL || "https://gamezone-5-default-rtdb.firebaseio.com",
   });
 }
 
@@ -28,6 +30,11 @@ function getDb() {
   const databaseId = process.env.FIREBASE_DATABASE_ID || "(default)";
   db = getFirestore(getApp(), databaseId);
   return db;
+}
+
+function getRtdb() {
+  getApp();
+  return admin.database();
 }
 
 function getMessaging() {
@@ -46,4 +53,4 @@ function friendlyFirestoreError(e) {
   return raw;
 }
 
-module.exports = { admin, getApp, getDb, getMessaging, friendlyFirestoreError };
+module.exports = { admin, getApp, getDb, getRtdb, getMessaging, friendlyFirestoreError };
