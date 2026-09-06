@@ -15,6 +15,7 @@ app.use("/api/auth", require("./routes/auth"));
 app.use("/api", require("./routes/tokens"));
 app.use("/api/notifications", require("./routes/notifications"));
 app.use("/api/users", require("./routes/users"));
+app.use("/api/settings", require("./routes/settings"));
 
 app.get("/api/health", async (req, res) => {
   try {
