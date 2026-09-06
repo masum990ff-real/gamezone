@@ -17,6 +17,8 @@ services:
         value: gamezone-5
       - key: FIREBASE_DATABASE_ID
         value: gamezone-5
+      - key: FIREBASE_RTDB_URL
+        value: https://gamezone-5-default-rtdb.firebaseio.com
       - key: FIREBASE_SERVICE_ACCOUNT_JSON
         sync: false
       - key: CORS_ORIGINS
