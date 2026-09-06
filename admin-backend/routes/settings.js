@@ -1,38 +1,55 @@
 const express = require("express");
-const { getDb, friendlyFirestoreError } = require("../config/firebase");
+const { getRtdb } = require("../config/firebase");
 const { ok, fail, authMiddleware } = require("../middleware/auth");
 
 const router = express.Router();
-const DOC = "app";
+
+function readSettings(rtdb) {
+  return rtdb.ref("settings/app").get().then((snap) => {
+    const v = snap.exists() ? snap.val() : {};
+    return {
+      supportUrl: v.supportUrl || "",
+      announcement: v.announcement || "",
+      rules: v.rules || "",
+    };
+  });
+}
 
 router.get("/", async (req, res) => {
   try {
-    const db = getDb();
-    const snap = await db.collection("settings").doc(DOC).get();
-    const supportUrl = snap.exists ? (snap.data().supportUrl || "") : "";
-    return ok(res, { supportUrl }, "");
+    const data = await readSettings(getRtdb());
+    return ok(res, data, "");
   } catch (e) {
     console.error("Settings load failed:", e.message);
-    return fail(res, 500, "Failed to load settings: " + friendlyFirestoreError(e));
+    return fail(res, 500, "Failed to load settings: " + (e.message || e));
   }
 });
 
 router.put("/", authMiddleware, async (req, res) => {
   try {
-    const { supportUrl } = req.body || {};
+    const { supportUrl, announcement, rules } = req.body || {};
     if (supportUrl && !/^https:\/\/.+/i.test(supportUrl)) {
       return fail(res, 400, "Support link must start with https://");
     }
-    const db = getDb();
-    await db.collection("settings").doc(DOC).set({
+    if (announcement && announcement.length > 200) {
+      return fail(res, 400, "Announcement max 200 chars");
+    }
+    if (rules && rules.length > 5000) {
+      return fail(res, 400, "Rules max 5000 chars");
+    }
+    const rtdb = getRtdb();
+    await rtdb.ref("settings/app").update({
       supportUrl: supportUrl || "",
+      announcement: announcement || "",
+      rules: rules || "",
       updatedAt: new Date().toISOString(),
       updatedBy: req.admin.email,
-    }, { merge: true });
-    return ok(res, { supportUrl: supportUrl || "" }, "Settings saved");
+    });
+    const data = await readSettings(rtdb);
+    return ok(res, data, "Settings saved");
   } catch (e) {
     console.error("Settings save failed:", e.message);
-    return fail(res, 500, "Failed to save settings: " + friendlyFirestoreError(e));
+    return fail(res, 500, "Failed to save settings: " + (e.message || e));
   }
 });
 
