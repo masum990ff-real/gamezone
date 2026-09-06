@@ -1,10 +1,11 @@
 const express = require("express");
 const { getDb, friendlyFirestoreError } = require("../config/firebase");
 const { ok, fail, authMiddleware } = require("../middleware/auth");
+const { registerLimiter } = require("../middleware/rateLimit");
 
 const router = express.Router();
 
-router.post("/register-token", async (req, res) => {
+router.post("/register-token", registerLimiter, async (req, res) => {
   try {
     const { token, deviceInfo } = req.body || {};
     if (!token || typeof token !== "string" || token.length < 20) {
