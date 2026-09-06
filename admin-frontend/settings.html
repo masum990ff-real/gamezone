@@ -54,6 +54,20 @@ Settings</a>
 class="w-full border border-violet-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70" />
 <p class="text-xs text-slate-400 mt-1.5">Must start with https:// — tapping support in the app opens this link.</p>
 </div>
+<div>
+<div class="flex justify-between items-center mb-1.5">
+<label class="text-sm font-bold">Announcement bar text</label>
+<span class="text-xs text-slate-400">0/200</span>
+</div>
+<input id="announcement" type="text" maxlength="200" placeholder="GAMEZONE MUST FOLLOW OFFICIAL RULES"
+class="w-full border border-violet-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70" />
+<p class="text-xs text-slate-400 mt-1.5">Shown under the top bar in the app. Tapping it opens the rules screen.</p>
+</div>
+<div>
+<label class="block text-sm font-bold mb-1.5">Official rules (full text)</label>
+<textarea id="rules" rows="8" maxlength="5000" placeholder="1. ...&#10;2. ..."
+class="w-full border border-violet-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70"></textarea>
+</div>
 <button id="saveBtn" type="submit" class="btn-grad text-white font-bold rounded-2xl px-6 py-3.5 w-full sm:w-auto">Save settings</button>
 </form>
 <div id="toast" class="hidden max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg"></div>
@@ -85,6 +99,8 @@ function showToast(msg, ok) {
   try {
     const data = await Api.getSettings();
     input.value = data.supportUrl || "";
+    document.getElementById("announcement").value = data.announcement || "";
+    document.getElementById("rules").value = data.rules || "";
   } catch (e) {
     showToast(e.message, false);
   }
@@ -92,6 +108,8 @@ function showToast(msg, ok) {
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const url = input.value.trim();
+  const announcement = document.getElementById("announcement").value.trim();
+  const rules = document.getElementById("rules").value.trim();
   if (url && !/^https:\/\/.+/i.test(url)) {
     showToast("Link must start with https://", false);
     return;
@@ -99,7 +117,7 @@ form.addEventListener("submit", async (e) => {
   btn.disabled = true;
   btn.textContent = "Saving...";
   try {
-    await Api.saveSettings(url);
+    await Api.saveSettings(url, announcement, rules);
     showToast("Settings saved!", true);
   } catch (ex) {
     showToast(ex.message, false);
