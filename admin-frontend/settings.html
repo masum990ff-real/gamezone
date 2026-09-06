@@ -68,6 +68,36 @@ class="w-full border border-violet-200 rounded-2xl px-4 py-3 focus:outline-none 
 <textarea id="rules" rows="8" maxlength="5000" placeholder="1. ...&#10;2. ..."
 class="w-full border border-violet-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70"></textarea>
 </div>
+<div class="grid sm:grid-cols-2 gap-4">
+<div>
+<label class="block text-sm font-bold mb-1.5">Refer reward (coins)</label>
+<input id="referCoins" type="number" min="0" max="10000" value="5"
+class="w-full border border-violet-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70" />
+<p class="text-xs text-slate-400 mt-1.5">Given to both referrer and new user.</p>
+</div>
+<div>
+<label class="block text-sm font-bold mb-1.5">App download link</label>
+<input id="downloadUrl" type="url" placeholder="https://..."
+class="w-full border border-violet-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70" />
+<p class="text-xs text-slate-400 mt-1.5">Shared with refer codes.</p>
+</div>
+</div>
+<div>
+<label class="block text-sm font-bold mb-1.5">FAQ</label>
+<textarea id="faq" rows="4" maxlength="5000" class="w-full border border-violet-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70"></textarea>
+</div>
+<div>
+<label class="block text-sm font-bold mb-1.5">About Us</label>
+<textarea id="about" rows="4" maxlength="5000" class="w-full border border-violet-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70"></textarea>
+</div>
+<div>
+<label class="block text-sm font-bold mb-1.5">Privacy Policy</label>
+<textarea id="privacy" rows="4" maxlength="5000" class="w-full border border-violet-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70"></textarea>
+</div>
+<div>
+<label class="block text-sm font-bold mb-1.5">Terms &amp; Conditions</label>
+<textarea id="terms" rows="4" maxlength="5000" class="w-full border border-violet-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70"></textarea>
+</div>
 <button id="saveBtn" type="submit" class="btn-grad text-white font-bold rounded-2xl px-6 py-3.5 w-full sm:w-auto">Save settings</button>
 </form>
 <div id="toast" class="hidden max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg"></div>
@@ -101,6 +131,12 @@ function showToast(msg, ok) {
     input.value = data.supportUrl || "";
     document.getElementById("announcement").value = data.announcement || "";
     document.getElementById("rules").value = data.rules || "";
+    document.getElementById("referCoins").value = data.referCoins !== undefined ? data.referCoins : 5;
+    document.getElementById("downloadUrl").value = data.downloadUrl || "";
+    document.getElementById("faq").value = data.faq || "";
+    document.getElementById("about").value = data.about || "";
+    document.getElementById("privacy").value = data.privacy || "";
+    document.getElementById("terms").value = data.terms || "";
   } catch (e) {
     showToast(e.message, false);
   }
@@ -117,7 +153,17 @@ form.addEventListener("submit", async (e) => {
   btn.disabled = true;
   btn.textContent = "Saving...";
   try {
-    await Api.saveSettings(url, announcement, rules);
+    await Api.saveSettings({
+      supportUrl: url,
+      announcement,
+      rules,
+      referCoins: document.getElementById("referCoins").value,
+      downloadUrl: document.getElementById("downloadUrl").value.trim(),
+      faq: document.getElementById("faq").value.trim(),
+      about: document.getElementById("about").value.trim(),
+      privacy: document.getElementById("privacy").value.trim(),
+      terms: document.getElementById("terms").value.trim(),
+    });
     showToast("Settings saved!", true);
   } catch (ex) {
     showToast(ex.message, false);
