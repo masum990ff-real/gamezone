@@ -63,8 +63,11 @@ const Api = (() => {
       request(`/api/users/${uid}/ban`, { method: "POST", body: JSON.stringify({ reason: reason || "" }) }),
     unbanUser: (uid) => request(`/api/users/${uid}/unban`, { method: "POST", body: "{}" }),
     getSettings: () => request("/api/settings"),
-    saveSettings: (supportUrl) =>
-      request("/api/settings", { method: "PUT", body: JSON.stringify({ supportUrl: supportUrl || "" }) }),
+    saveSettings: (supportUrl, announcement, rules) =>
+      request("/api/settings", {
+        method: "PUT",
+        body: JSON.stringify({ supportUrl: supportUrl || "", announcement: announcement || "", rules: rules || "" }),
+      }),
     getHealth: () => fetch("/api/health").then((r) => r.json()),
   };
 })();
