@@ -44,7 +44,7 @@ router.post("/sync", firebaseAuthMiddleware, syncLimiter, async (req, res) => {
     if (snap.exists) {
       const update = { lastActive: now };
       if (username) update.username = username;
-      if (phone !== undefined) update.phone = digits;
+      if (digits) update.phone = digits;
       await ref.set(update, { merge: true });
     } else {
       let bonus = 0;
@@ -52,7 +52,8 @@ router.post("/sync", firebaseAuthMiddleware, syncLimiter, async (req, res) => {
       const code = String(referCode || "").trim();
       const settings = await getRtdb().ref("settings/app").get()
         .then((s) => (s.exists() ? s.val() : {})).catch(() => ({}));
-      const referCoins = Math.max(0, parseInt(settings.referCoins) || 0);
+      const parsed = parseInt(settings.referCoins);
+      const referCoins = isNaN(parsed) ? 5 : Math.max(0, Math.min(10000, parsed));
       if (code) {
         if (code === username) return fail(res, 400, "You cannot use your own refer code");
         const rq = await usersCol.where("username", "==", code).limit(1).get();
