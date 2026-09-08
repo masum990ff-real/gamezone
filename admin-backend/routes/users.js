@@ -68,6 +68,8 @@ router.post("/sync", firebaseAuthMiddleware, syncLimiter, async (req, res) => {
         username: username || "",
         phone: digits,
         coins: bonus,
+        depositCoins: 0,
+        winCoins: 0,
         banned: false,
         banReason: "",
         createdAt: now,
