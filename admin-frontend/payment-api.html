@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GameZone Admin - Payment API</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/css/premium.css" />
+</head>
+<body class="min-h-screen text-slate-800">
+<div class="aurora"><span></span><span></span><span></span></div>
+
+<div class="flex min-h-screen">
+<button id="menuBtn" class="md:hidden fixed top-4 left-4 z-20 btn-grad text-white rounded-2xl px-3.5 py-2 font-bold">☰</button>
+<aside id="sidebar" class="hidden md:flex flex-col w-64 shrink-0 fixed md:static inset-y-0 left-0 z-10 p-6 text-white" style="background: linear-gradient(180deg, #0f0b2d, #2e1065 70%, #4c1d95);">
+<div class="flex items-center gap-2.5 mb-10">
+<div class="w-10 h-10 rounded-2xl bg-white text-lg font-extrabold flex items-center justify-center shadow-lg"><span class="grad-text">G</span></div>
+<div>
+<h2 class="text-lg font-extrabold leading-none">GameZone</h2>
+<p class="text-[11px] text-violet-300 mt-1">Admin Panel</p>
+</div>
+</div>
+<nav class="space-y-2 text-sm font-semibold">
+<a href="/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10"/></svg>
+Dashboard</a>
+<a href="/send-notification.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+Send Notification</a>
+<a href="/history.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+History</a>
+<a href="/users.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+Users</a>
+<a href="/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8l2.8-2.8M17 7l2.8-2.8"/></svg>
+Settings</a>
+<a href="/payment-api.html" class="nav-active flex items-center gap-3 px-4 py-3 rounded-2xl text-white">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+Payment API</a>
+</nav>
+<button onclick="Api.logout()" class="text-left px-4 py-3 rounded-2xl text-rose-300 hover:bg-white/10 font-semibold text-sm mt-auto transition">Logout</button>
+</aside>
+<div id="overlay" class="hidden fixed inset-0 bg-black/40 z-[5] md:hidden"></div>
+
+<main class="flex-1 p-6 md:p-10 pt-16 md:pt-10 w-full max-w-2xl mx-auto">
+<div class="mb-6 anim-in">
+<h1 class="text-2xl md:text-3xl font-extrabold">Payment <span class="grad-text">API</span></h1>
+<p class="text-sm text-slate-500 mt-1">ZapUPI gateway secret — stored server-side only, never sent to the app</p>
+</div>
+
+<div class="anim-in d1 glass shadow-xl rounded-3xl px-6 py-4 mb-4 flex items-center gap-3">
+<span id="statusDot" class="w-3 h-3 rounded-full bg-slate-300 shrink-0"></span>
+<p id="statusText" class="text-sm font-bold">Loading status…</p>
+</div>
+
+<form id="payForm" class="anim-in d2 glass shadow-xl rounded-3xl p-6 space-y-4">
+<div>
+<label class="block text-sm font-bold mb-1.5">Gateway secret key (zap_key)</label>
+<input id="zapKey" type="password" autocomplete="off" placeholder="Paste zap_key from ZapUPI dashboard"
+class="w-full border border-violet-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70" />
+<p class="text-xs text-slate-400 mt-1.5">Saved in RTDB settings/payment. Only status + last 4 digits are ever shown back.</p>
+</div>
+<button id="saveBtn" type="submit" class="btn-grad text-white font-bold rounded-2xl px-6 py-3.5 w-full sm:w-auto">Save key</button>
+</form>
+<div id="toast" class="hidden max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg"></div>
+</main>
+</div>
+<script src="/js/api.js"></script>
+<script>
+Api.requireAuth();
+const sidebar = document.getElementById("sidebar");
+const overlay = document.getElementById("overlay");
+function toggleMenu(force) {
+  const show = force !== undefined ? force : sidebar.classList.contains("hidden");
+  sidebar.classList.toggle("hidden", !show);
+  overlay.classList.toggle("hidden", !show);
+}
+document.getElementById("menuBtn").addEventListener("click", () => toggleMenu());
+overlay.addEventListener("click", () => toggleMenu(false));
+
+const form = document.getElementById("payForm");
+const input = document.getElementById("zapKey");
+const btn = document.getElementById("saveBtn");
+const toast = document.getElementById("toast");
+const dot = document.getElementById("statusDot");
+const statusText = document.getElementById("statusText");
+function showToast(msg, ok) {
+  toast.textContent = msg;
+  toast.className = "toast-in max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg " +
+    (ok ? "bg-emerald-500 text-white" : "bg-rose-500 text-white");
+}
+function showStatus(configured, masked) {
+  dot.className = "w-3 h-3 rounded-full shrink-0 " + (configured ? "bg-emerald-500" : "bg-rose-500");
+  statusText.textContent = configured ? "Configured (" + masked + ")" : "Not configured";
+}
+(async () => {
+  try {
+    const data = await Api.getPaymentConfig();
+    showStatus(data.configured, data.masked);
+  } catch (e) {
+    statusText.textContent = e.message;
+  }
+})();
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const key = input.value.trim();
+  if (!key) {
+    showToast("Paste the gateway key first", false);
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+  try {
+    const data = await Api.savePaymentConfig(key);
+    showStatus(data.configured, data.masked);
+    input.value = "";
+    showToast("Payment key saved!", true);
+  } catch (ex) {
+    showToast(ex.message, false);
+  }
+  btn.disabled = false;
+  btn.textContent = "Save key";
+});
+</script>
+</body>
+</html>
