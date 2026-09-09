@@ -49,10 +49,12 @@ function isTestPayment(environment, txnId) {
 }
 
 function confirmedPaid(confirmJson) {
-  if (!confirmJson || confirmJson.status !== "success") return null;
+  if (!confirmJson) return null;
+  const top = String(confirmJson.status || "").trim().toLowerCase();
+  if (top !== "success") return null;
   const d = confirmJson.data || {};
-  const st = String(d.status || "");
-  if (!["Success", "success", "paid", "PAID"].includes(st)) return null;
+  const st = String(d.status || "").trim().toLowerCase();
+  if (!["success", "paid", "successful", "completed", "complete", "approved", "test"].includes(st)) return null;
   return d;
 }
 
@@ -97,10 +99,10 @@ async function confirmAndCredit(rtdb, orderId, uid, confirmed, fallbackEnv, fall
 }
 
 function gatewayLocalStatus(raw) {
-  const s = String(raw || "").toLowerCase();
-  if (s === "pending") return "pending";
-  if (s === "success" || s === "paid") return "success";
-  if (s === "failed" || s === "fail") return "failed";
+  const s = String(raw || "").trim().toLowerCase();
+  if (s === "pending" || s === "created" || s === "initiated") return "pending";
+  if (s === "success" || s === "paid" || s === "successful" || s === "completed" || s === "complete" || s === "approved" || s === "test") return "success";
+  if (s === "failed" || s === "fail" || s === "failure" || s === "rejected" || s === "cancelled" || s === "canceled") return "failed";
   return "timeout";
 }
 
@@ -159,8 +161,8 @@ router.post("/create-order", firebaseAuthMiddleware, payLimiter, async (req, res
         const chk = await postJson(ZAP_STATUS, { zap_key: zapKey, order_id: orderId }, 30000);
         const d = (chk.json && chk.json.data) || {};
         const gs = String(d.status || "");
-        const gl = gs.toLowerCase();
-        if (chk.json && chk.json.status === "success" && (gl === "pending" || gl === "success" || gl === "paid" || gl === "failed" || gl === "fail")) {
+        const gl = gs.trim().toLowerCase();
+        if (chk.json && String(chk.json.status || "").trim().toLowerCase() === "success" && gatewayLocalStatus(gs) !== "timeout") {
           const now = new Date().toISOString();
           try {
             const ex = await rtdb.ref("payments/byUid/" + uid + "/" + orderId).get();
@@ -176,11 +178,11 @@ router.post("/create-order", firebaseAuthMiddleware, payLimiter, async (req, res
           if (paymentUrl) {
             return ok(res, { payment_url: paymentUrl, order_id: orderId, recovered: true, status: gl }, "");
           }
-          if (gl === "success" || gl === "paid") {
+          if (gatewayLocalStatus(gs) === "success") {
             const result = await confirmAndCredit(rtdb, orderId, uid, d, "", "", "");
             return ok(res, { payment_url: "", order_id: orderId, recovered: true, status: result }, "");
           }
-          if (gl === "failed" || gl === "fail") {
+          if (gatewayLocalStatus(gs) === "failed") {
             try {
               await rtdb.ref("payments/byUid/" + uid + "/" + orderId).update({ status: "failed", updatedAt: now });
             } catch (e) {}
@@ -245,6 +247,7 @@ router.post("/:orderId/refresh", firebaseAuthMiddleware, payLimiter, async (req,
     const d = (gw.json && gw.json.data) || {};
     const gs = String(d.status || "");
     const local = gatewayLocalStatus(gs);
+    console.error("[refresh] order=" + orderId + " http=" + gw.http + " top=" + String(gw.json && gw.json.status) + " gs=" + gs + " local=" + local + " raw=" + (gw.raw || ""));
     const recRef = rtdb.ref("payments/byUid/" + uid + "/" + orderId);
     const now = new Date().toISOString();
     if (local === "pending") {
@@ -288,7 +291,8 @@ router.post("/webhook", async (req, res) => {
     }
     const uid = ptr.val().uid;
     const recRef = rtdb.ref("payments/byUid/" + uid + "/" + order_id);
-    if (status === "Success") {
+    const wst = String(status || "").trim().toLowerCase();
+    if (wst === "success" || wst === "paid" || wst === "successful" || wst === "completed" || wst === "approved" || wst === "test") {
       let zapKey = "";
       try {
         zapKey = await readZapKey(rtdb);
@@ -312,7 +316,7 @@ router.post("/webhook", async (req, res) => {
       await confirmAndCredit(rtdb, order_id, uid, confirmed, environment, txn_id, utr);
       return res.status(200).json({ status: "ok" });
     }
-    if (status === "Failed") {
+    if (wst === "failed" || wst === "fail" || wst === "failure" || wst === "rejected" || wst === "cancelled" || wst === "canceled") {
       await recRef.update({
         status: "failed",
         txn_id: txn_id || "",
