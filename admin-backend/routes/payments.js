@@ -54,7 +54,7 @@ function confirmedPaid(confirmJson) {
   if (top !== "success") return null;
   const d = confirmJson.data || {};
   const st = String(d.status || "").trim().toLowerCase();
-  if (!["success", "paid", "successful", "completed", "complete", "approved", "test"].includes(st)) return null;
+  if (!["success", "paid", "successful", "completed", "complete", "approved", "test", "captured"].includes(st)) return null;
   return d;
 }
 
@@ -100,10 +100,11 @@ async function confirmAndCredit(rtdb, orderId, uid, confirmed, fallbackEnv, fall
 
 function gatewayLocalStatus(raw) {
   const s = String(raw || "").trim().toLowerCase();
-  if (s === "pending" || s === "created" || s === "initiated") return "pending";
-  if (s === "success" || s === "paid" || s === "successful" || s === "completed" || s === "complete" || s === "approved" || s === "test") return "success";
+  if (s === "pending" || s === "created" || s === "initiated" || s === "processing" || s === "") return "pending";
+  if (s === "success" || s === "paid" || s === "successful" || s === "completed" || s === "complete" || s === "approved" || s === "test" || s === "captured") return "success";
   if (s === "failed" || s === "fail" || s === "failure" || s === "rejected" || s === "cancelled" || s === "canceled") return "failed";
-  return "timeout";
+  if (s === "timeout" || s === "timed out" || s === "timedout" || s === "expired" || s === "expire" || s === "expiry") return "timeout";
+  return "pending";
 }
 
 router.post("/create-order", firebaseAuthMiddleware, payLimiter, async (req, res) => {
@@ -247,7 +248,7 @@ router.post("/:orderId/refresh", firebaseAuthMiddleware, payLimiter, async (req,
     const d = (gw.json && gw.json.data) || {};
     const gs = String(d.status || "");
     const local = gatewayLocalStatus(gs);
-    console.error("[refresh] order=" + orderId + " http=" + gw.http + " top=" + String(gw.json && gw.json.status) + " gs=" + gs + " local=" + local + " raw=" + (gw.raw || ""));
+    console.error("[order-status] refresh order=" + orderId + " http=" + gw.http + " top=" + String(gw.json && gw.json.status) + " gs=" + gs + " local=" + local + " raw=" + String(gw.raw || "").slice(0, 300));
     const recRef = rtdb.ref("payments/byUid/" + uid + "/" + orderId);
     const now = new Date().toISOString();
     if (local === "pending") {
@@ -304,6 +305,7 @@ router.post("/webhook", async (req, res) => {
         try {
           const gw = await postJson(ZAP_STATUS, { zap_key: zapKey, order_id }, 30000);
           confirmed = confirmedPaid(gw.json);
+          console.error("[order-status] webhook order=" + order_id + " http=" + gw.http + " top=" + String(gw.json && gw.json.status) + " gs=" + String((gw.json && gw.json.data && gw.json.data.status) || "") + " confirmed=" + (!!confirmed) + " raw=" + String(gw.raw || "").slice(0, 300));
           if (!confirmed) console.error("Webhook confirm not-paid order=" + order_id + " http=" + gw.http + " body=" + (gw.raw || ""));
         } catch (e) {
           console.error("Webhook confirm failed:", gwCause(e));
