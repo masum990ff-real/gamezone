@@ -8,6 +8,9 @@ const router = express.Router();
 
 const ZAP_CREATE = "https://pay.zapupi.com/api/create-order";
 const ZAP_STATUS = "https://pay.zapupi.com/api/order-status";
+const ZAP_SUCCESS_URL = "https://zapupi.com/payment?s=s";
+const ZAP_FAILED_URL = "https://zapupi.com/payment?s=f";
+const ZAP_TIMEOUT_URL = "https://zapupi.com/payment?s=t";
 
 async function readZapKey(rtdb) {
   const snap = await rtdb.ref("settings/payment").get();
@@ -79,6 +82,9 @@ router.post("/create-order", firebaseAuthMiddleware, payLimiter, async (req, res
       amount: String(amount),
       remark: "GAMEZONE|" + uid,
       webhook_url: base + "/api/payments/webhook",
+      success_url: ZAP_SUCCESS_URL,
+      failed_url: ZAP_FAILED_URL,
+      timeout_url: ZAP_TIMEOUT_URL,
     };
     if (phone) gwBody.customer_mobile = phone;
     console.error("[create-order] gateway POST start order=" + orderId + " webhook=" + gwBody.webhook_url + " hasPhone=" + (!!phone));
