@@ -16,6 +16,8 @@ app.use("/api", require("./routes/tokens"));
 app.use("/api/notifications", require("./routes/notifications"));
 app.use("/api/users", require("./routes/users"));
 app.use("/api/settings", require("./routes/settings"));
+app.use("/api/payment-config", require("./routes/payment-config"));
+app.use("/api/payments", require("./routes/payments"));
 
 app.get("/api/health", async (req, res) => {
   try {
