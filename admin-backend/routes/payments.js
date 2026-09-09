@@ -18,8 +18,12 @@ async function readZapKey(rtdb) {
   return v.zapKey || "";
 }
 
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 async function postJson(url, body, timeoutMs) {
-  const ms = timeoutMs || 25000;
+  const ms = timeoutMs || 30000;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   try {
@@ -50,6 +54,54 @@ function confirmedPaid(confirmJson) {
   const st = String(d.status || "");
   if (!["Success", "success", "paid", "PAID"].includes(st)) return null;
   return d;
+}
+
+function isAbortErr(e) {
+  return !!e && (e.name === "AbortError" || /abort|timeout/i.test(e.message || ""));
+}
+
+function gwCause(e) {
+  return (e && e.cause && e.cause.code) || (e && e.message) || "unknown";
+}
+
+async function confirmAndCredit(rtdb, orderId, uid, confirmed, fallbackEnv, fallbackTxn, fallbackUtr) {
+  const recRef = rtdb.ref("payments/byUid/" + uid + "/" + orderId);
+  const env = confirmed.environment || fallbackEnv || "";
+  const txn = confirmed.txn_id || fallbackTxn || "";
+  const utr = confirmed.utr || fallbackUtr || "";
+  if (isTestPayment(env, txn)) {
+    await recRef.update({ status: "test", txn_id: txn, utr: utr, updatedAt: new Date().toISOString() });
+    return "test";
+  }
+  let credited = 0;
+  await recRef.transaction((cur) => {
+    if (!cur || cur.status !== "pending") return;
+    credited = Number(cur.amount) || 0;
+    cur.status = "success";
+    cur.txn_id = txn;
+    cur.utr = utr;
+    cur.updatedAt = new Date().toISOString();
+    return cur;
+  });
+  if (credited > 0) {
+    await getDb().collection("users").doc(uid).update({
+      depositCoins: FieldValue.increment(credited),
+    });
+    return "success";
+  }
+  try {
+    const snap = await recRef.get();
+    if (snap.exists()) return String(snap.val().status || "success");
+  } catch (e) {}
+  return "success";
+}
+
+function gatewayLocalStatus(raw) {
+  const s = String(raw || "").toLowerCase();
+  if (s === "pending") return "pending";
+  if (s === "success" || s === "paid") return "success";
+  if (s === "failed" || s === "fail") return "failed";
+  return "timeout";
 }
 
 router.post("/create-order", firebaseAuthMiddleware, payLimiter, async (req, res) => {
@@ -88,26 +140,62 @@ router.post("/create-order", firebaseAuthMiddleware, payLimiter, async (req, res
     };
     if (phone) gwBody.customer_mobile = phone;
     console.error("[create-order] gateway POST start order=" + orderId + " webhook=" + gwBody.webhook_url + " hasPhone=" + (!!phone));
-    let gw;
-    try {
-      gw = await postJson(ZAP_CREATE, gwBody, 25000);
-    } catch (e) {
-      const cause = (e && e.cause && e.cause.code) || (e && e.message) || "unknown";
-      console.error("[create-order] gateway fetch threw after " + (Date.now() - t0) + "ms: " + (e && e.name) + ": " + cause);
-      if (e && (e.name === "AbortError" || /abort|timeout/i.test(e.message || ""))) {
+    let gw = null;
+    let lastErr = null;
+    const waits = [0, 3000, 8000];
+    for (let i = 0; i < 3; i++) {
+      if (waits[i] > 0) await sleep(waits[i]);
+      try {
+        gw = await postJson(ZAP_CREATE, gwBody, 30000);
+        lastErr = null;
+        break;
+      } catch (e) {
+        lastErr = e;
+        console.error("[create-order] gateway attempt " + (i + 1) + " threw after " + (Date.now() - t0) + "ms: " + (e && e.name) + ": " + gwCause(e));
+      }
+    }
+    if (!gw) {
+      try {
+        const chk = await postJson(ZAP_STATUS, { zap_key: zapKey, order_id: orderId }, 30000);
+        const d = (chk.json && chk.json.data) || {};
+        const gs = String(d.status || "");
+        const gl = gs.toLowerCase();
+        if (chk.json && chk.json.status === "success" && (gl === "pending" || gl === "success" || gl === "paid" || gl === "failed" || gl === "fail")) {
+          const now = new Date().toISOString();
+          try {
+            const ex = await rtdb.ref("payments/byUid/" + uid + "/" + orderId).get();
+            if (!ex.exists()) {
+              await rtdb.ref("payments/byUid/" + uid + "/" + orderId).set({ uid, amount, status: "pending", createdAt: now });
+            }
+          } catch (e) {}
+          try {
+            await rtdb.ref("payments/byOrder/" + orderId).set({ uid });
+          } catch (e) {}
+          const paymentUrl = d.payment_url || d.paymentUrl || d.url || chk.json.payment_url || "";
+          console.error("[create-order] timeout-recovery found order=" + orderId + " gwStatus=" + gs + " hasUrl=" + (!!paymentUrl));
+          if (paymentUrl) {
+            return ok(res, { payment_url: paymentUrl, order_id: orderId, recovered: true, status: gl }, "");
+          }
+          if (gl === "success" || gl === "paid") {
+            const result = await confirmAndCredit(rtdb, orderId, uid, d, "", "", "");
+            return ok(res, { payment_url: "", order_id: orderId, recovered: true, status: result }, "");
+          }
+          if (gl === "failed" || gl === "fail") {
+            try {
+              await rtdb.ref("payments/byUid/" + uid + "/" + orderId).update({ status: "failed", updatedAt: now });
+            } catch (e) {}
+            return ok(res, { payment_url: "", order_id: orderId, recovered: true, status: "failed" }, "");
+          }
+          return ok(res, { payment_url: "", order_id: orderId, recovered: true, status: "pending" }, "");
+        }
+      } catch (e) {
+        console.error("[create-order] timeout-recovery status check failed:", gwCause(e));
+      }
+      const cause = gwCause(lastErr);
+      if (isAbortErr(lastErr)) {
         return fail(res, 504, "Payment gateway timeout, try again");
       }
-      await new Promise((r) => setTimeout(r, 3000));
-      try {
-        gw = await postJson(ZAP_CREATE, gwBody, 25000);
-      } catch (e2) {
-        const cause2 = (e2 && e2.cause && e2.cause.code) || (e2 && e2.message) || "unknown";
-        console.error("[create-order] gateway retry failed after " + (Date.now() - t0) + "ms: " + (e2 && e2.name) + ": " + cause2);
-        if (e2 && (e2.name === "AbortError" || /abort|timeout/i.test(e2.message || ""))) {
-          return fail(res, 504, "Payment gateway timeout, try again");
-        }
-        return fail(res, 502, "Payment gateway unreachable (" + String(cause2).slice(0, 60) + "), try again");
-      }
+      return fail(res, 502, "Payment gateway unreachable (" + String(cause).slice(0, 60) + "), try again");
     }
     console.error("[create-order] gateway done in " + (Date.now() - t0) + "ms http=" + gw.http + " status=" + (gw.json && gw.json.status));
     if (gw.json.status !== "success" || !gw.json.payment_url) {
@@ -127,6 +215,62 @@ router.post("/create-order", firebaseAuthMiddleware, payLimiter, async (req, res
   } catch (e) {
     console.error("Create-order failed:", e.message);
     return fail(res, 500, "Failed to create order: " + friendlyFirestoreError(e));
+  }
+});
+
+router.post("/:orderId/refresh", firebaseAuthMiddleware, payLimiter, async (req, res) => {
+  try {
+    const uid = req.user.uid;
+    const orderId = String(req.params.orderId || "");
+    if (!orderId) return fail(res, 404, "Order not found");
+    const rtdb = getRtdb();
+    const ptr = await rtdb.ref("payments/byOrder/" + orderId).get();
+    if (!ptr.exists() || !ptr.val() || ptr.val().uid !== uid) {
+      return fail(res, 404, "Order not found");
+    }
+    let zapKey = "";
+    try {
+      zapKey = await readZapKey(rtdb);
+    } catch (e) {
+      console.error("Refresh key read failed:", e.message);
+    }
+    if (!zapKey) return fail(res, 400, "Payment gateway not configured");
+    let gw;
+    try {
+      gw = await postJson(ZAP_STATUS, { zap_key: zapKey, order_id: orderId }, 30000);
+    } catch (e) {
+      console.error("Refresh status fetch failed:", gwCause(e));
+      return fail(res, 502, "Payment gateway unreachable (" + String(gwCause(e)).slice(0, 60) + "), try again");
+    }
+    const d = (gw.json && gw.json.data) || {};
+    const gs = String(d.status || "");
+    const local = gatewayLocalStatus(gs);
+    const recRef = rtdb.ref("payments/byUid/" + uid + "/" + orderId);
+    const now = new Date().toISOString();
+    if (local === "pending") {
+      try {
+        await recRef.update({ status: "pending", updatedAt: now });
+      } catch (e) {}
+      return ok(res, { status: "pending" }, "");
+    }
+    if (local === "success") {
+      const confirmed = confirmedPaid(gw.json) || d;
+      const result = await confirmAndCredit(rtdb, orderId, uid, confirmed, "", "", "");
+      return ok(res, { status: result }, "");
+    }
+    if (local === "failed") {
+      try {
+        await recRef.update({ status: "failed", txn_id: d.txn_id || "", utr: d.utr || "", updatedAt: now });
+      } catch (e) {}
+      return ok(res, { status: "failed" }, "");
+    }
+    try {
+      await recRef.update({ status: "timeout", updatedAt: now });
+    } catch (e) {}
+    return ok(res, { status: "timeout" }, "");
+  } catch (e) {
+    console.error("Refresh failed:", e.message);
+    return fail(res, 500, "Failed to refresh order: " + friendlyFirestoreError(e));
   }
 });
 
@@ -154,38 +298,18 @@ router.post("/webhook", async (req, res) => {
       let confirmed = null;
       if (zapKey) {
         try {
-          const gw = await postJson(ZAP_STATUS, { zap_key: zapKey, order_id }, 25000);
+          const gw = await postJson(ZAP_STATUS, { zap_key: zapKey, order_id }, 30000);
           confirmed = confirmedPaid(gw.json);
           if (!confirmed) console.error("Webhook confirm not-paid order=" + order_id + " http=" + gw.http + " body=" + (gw.raw || ""));
         } catch (e) {
-          console.error("Webhook confirm failed:", (e && e.cause && e.cause.code) || e.message);
+          console.error("Webhook confirm failed:", gwCause(e));
         }
       }
       if (!confirmed) {
         console.error("Webhook unconfirmed success:", order_id);
         return res.status(200).json({ status: "ok" });
       }
-      const env = confirmed.environment || environment || "";
-      const txn = confirmed.txn_id || txn_id || "";
-      if (isTestPayment(env, txn)) {
-        await recRef.update({ status: "test", txn_id: txn, utr: confirmed.utr || utr || "", updatedAt: new Date().toISOString() });
-        return res.status(200).json({ status: "ok" });
-      }
-      let credited = 0;
-      await recRef.transaction((cur) => {
-        if (!cur || cur.status !== "pending") return;
-        credited = Number(cur.amount) || 0;
-        cur.status = "success";
-        cur.txn_id = txn;
-        cur.utr = confirmed.utr || utr || "";
-        cur.updatedAt = new Date().toISOString();
-        return cur;
-      });
-      if (credited > 0) {
-        await getDb().collection("users").doc(uid).update({
-          depositCoins: FieldValue.increment(credited),
-        });
-      }
+      await confirmAndCredit(rtdb, order_id, uid, confirmed, environment, txn_id, utr);
       return res.status(200).json({ status: "ok" });
     }
     if (status === "Failed") {
