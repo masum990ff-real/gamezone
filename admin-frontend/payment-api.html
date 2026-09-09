@@ -55,6 +55,11 @@ Payment API</a>
 <p id="statusText" class="text-sm font-bold">Loading status…</p>
 </div>
 
+<div class="anim-in d1 glass shadow-xl rounded-3xl px-6 py-4 mb-4">
+<p class="text-xs font-bold text-slate-500">Webhook URL (auto-sent with every order — nothing to set in ZapUPI dashboard)</p>
+<p id="webhookText" class="text-xs font-mono break-all mt-1">Loading…</p>
+</div>
+
 <form id="payForm" class="anim-in d2 glass shadow-xl rounded-3xl p-6 space-y-4">
 <div>
 <label class="block text-sm font-bold mb-1.5">Gateway secret key (zap_key)</label>
@@ -99,6 +104,7 @@ function showStatus(configured, masked) {
   try {
     const data = await Api.getPaymentConfig();
     showStatus(data.configured, data.masked);
+    document.getElementById("webhookText").textContent = data.webhookUrl || "";
   } catch (e) {
     statusText.textContent = e.message;
   }
@@ -115,6 +121,7 @@ form.addEventListener("submit", async (e) => {
   try {
     const data = await Api.savePaymentConfig(key);
     showStatus(data.configured, data.masked);
+    document.getElementById("webhookText").textContent = data.webhookUrl || "";
     input.value = "";
     showToast("Payment key saved!", true);
   } catch (ex) {
