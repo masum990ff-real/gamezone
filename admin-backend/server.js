@@ -5,6 +5,7 @@ const path = require("path");
 const { fail } = require("./middleware/auth");
 
 const app = express();
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
 
 const origins = (process.env.CORS_ORIGINS || "http://localhost:3000").split(",");
