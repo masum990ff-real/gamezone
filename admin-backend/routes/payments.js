@@ -15,17 +15,25 @@ async function readZapKey(rtdb) {
   return v.zapKey || "";
 }
 
-async function postJson(url, body) {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const text = await res.text();
+async function postJson(url, body, timeoutMs) {
+  const ms = timeoutMs || 25000;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
   try {
-    return { http: res.status, json: JSON.parse(text) };
-  } catch (e) {
-    return { http: res.status, json: {} };
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    const text = await res.text();
+    try {
+      return { http: res.status, json: JSON.parse(text), raw: text.slice(0, 500) };
+    } catch (e) {
+      return { http: res.status, json: {}, raw: text.slice(0, 500) };
+    }
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -48,8 +56,11 @@ router.post("/create-order", firebaseAuthMiddleware, payLimiter, async (req, res
       return fail(res, 400, "Amount must be an integer between 10 and 1000");
     }
     const rtdb = getRtdb();
+    const t0 = Date.now();
     const zapKey = await readZapKey(rtdb);
+    console.error("[create-order] start uid=" + uid + " amount=" + amount + " keyPresent=" + (!!zapKey));
     if (!zapKey) {
+      console.error("[create-order] no zap_key in RTDB settings/payment");
       return fail(res, 400, "Payment gateway not configured");
     }
     const uid = req.user.uid;
@@ -70,15 +81,22 @@ router.post("/create-order", firebaseAuthMiddleware, payLimiter, async (req, res
       webhook_url: base + "/api/payments/webhook",
     };
     if (phone) gwBody.customer_mobile = phone;
+    console.error("[create-order] gateway POST start order=" + orderId + " webhook=" + gwBody.webhook_url + " hasPhone=" + (!!phone));
     let gw;
     try {
-      gw = await postJson(ZAP_CREATE, gwBody);
+      gw = await postJson(ZAP_CREATE, gwBody, 25000);
     } catch (e) {
-      console.error("Gateway create-order failed:", e.message);
+      console.error("[create-order] gateway fetch threw after " + (Date.now() - t0) + "ms: " + (e && e.name) + ": " + (e && e.message));
+      if (e && (e.name === "AbortError" || /abort|timeout/i.test(e.message || ""))) {
+        return fail(res, 504, "Payment gateway timeout, try again");
+      }
       return fail(res, 502, "Payment gateway unreachable, try again");
     }
+    console.error("[create-order] gateway done in " + (Date.now() - t0) + "ms http=" + gw.http + " status=" + (gw.json && gw.json.status));
     if (gw.json.status !== "success" || !gw.json.payment_url) {
-      return fail(res, 502, gw.json.message || "Gateway rejected the order");
+      console.error("[create-order] gateway rejected order=" + orderId + " http=" + gw.http + " body=" + (gw.raw || ""));
+      const gm = String((gw.json && gw.json.message) || "").slice(0, 200);
+      return fail(res, 502, "Payment failed: " + (gm || ("gateway HTTP " + gw.http)));
     }
     const now = new Date().toISOString();
     await rtdb.ref("payments/byUid/" + uid + "/" + orderId).set({
@@ -119,8 +137,9 @@ router.post("/webhook", async (req, res) => {
       let confirmed = null;
       if (zapKey) {
         try {
-          const gw = await postJson(ZAP_STATUS, { zap_key: zapKey, order_id });
+          const gw = await postJson(ZAP_STATUS, { zap_key: zapKey, order_id }, 25000);
           confirmed = confirmedPaid(gw.json);
+          if (!confirmed) console.error("Webhook confirm not-paid order=" + order_id + " http=" + gw.http + " body=" + (gw.raw || ""));
         } catch (e) {
           console.error("Webhook confirm failed:", e.message);
         }
