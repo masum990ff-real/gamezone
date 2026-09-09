@@ -10,12 +10,17 @@ function mask(key) {
   return "****" + s.slice(-4);
 }
 
+function webhookUrl() {
+  const base = (process.env.BACKEND_URL || "https://gamezone-sa5x.onrender.com").replace(/\/+$/, "");
+  return base + "/api/payments/webhook";
+}
+
 router.get("/", authMiddleware, async (req, res) => {
   try {
     const snap = await getRtdb().ref("settings/payment").get();
     const v = snap.exists() ? snap.val() : {};
     const zapKey = v.zapKey || "";
-    return ok(res, { configured: !!zapKey, masked: mask(zapKey) }, "");
+    return ok(res, { configured: !!zapKey, masked: mask(zapKey), webhookUrl: webhookUrl() }, "");
   } catch (e) {
     console.error("Payment config load failed:", e.message);
     return fail(res, 500, "Failed to load payment config");
@@ -34,7 +39,7 @@ router.put("/", authMiddleware, async (req, res) => {
       updatedAt: new Date().toISOString(),
       updatedBy: req.admin.email,
     });
-    return ok(res, { configured: true, masked: mask(zapKey) }, "Payment key saved");
+    return ok(res, { configured: true, masked: mask(zapKey), webhookUrl: webhookUrl() }, "Payment key saved");
   } catch (e) {
     console.error("Payment config save failed:", e.message);
     return fail(res, 500, "Failed to save payment key");
