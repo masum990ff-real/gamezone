@@ -79,5 +79,11 @@ const Api = (() => {
         }),
       }),
     getHealth: () => fetch("/api/health").then((r) => r.json()),
+    getPaymentConfig: () => request("/api/payment-config"),
+    savePaymentConfig: (zapKey) =>
+      request("/api/payment-config", {
+        method: "PUT",
+        body: JSON.stringify({ zapKey }),
+      }),
   };
 })();
