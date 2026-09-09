@@ -23,3 +23,5 @@ services:
         sync: false
       - key: CORS_ORIGINS
         sync: false
+      - key: BACKEND_URL
+        value: https://gamezone-sa5x.onrender.com
