@@ -51,6 +51,7 @@ function confirmedPaid(confirmJson) {
 
 router.post("/create-order", firebaseAuthMiddleware, payLimiter, async (req, res) => {
   try {
+    const uid = req.user.uid;
     const amount = parseInt(req.body && req.body.amount);
     if (!Number.isInteger(amount) || amount < 10 || amount > 1000) {
       return fail(res, 400, "Amount must be an integer between 10 and 1000");
@@ -63,8 +64,7 @@ router.post("/create-order", firebaseAuthMiddleware, payLimiter, async (req, res
       console.error("[create-order] no zap_key in RTDB settings/payment");
       return fail(res, 400, "Payment gateway not configured");
     }
-    const uid = req.user.uid;
-    const orderId = "ORD" + Date.now() + uid.slice(-4);
+    const orderId = "ORD" + Date.now() + String(uid).slice(-4);
     let phone = "";
     try {
       const usnap = await getDb().collection("users").doc(uid).get();
@@ -86,11 +86,22 @@ router.post("/create-order", firebaseAuthMiddleware, payLimiter, async (req, res
     try {
       gw = await postJson(ZAP_CREATE, gwBody, 25000);
     } catch (e) {
-      console.error("[create-order] gateway fetch threw after " + (Date.now() - t0) + "ms: " + (e && e.name) + ": " + (e && e.message));
+      const cause = (e && e.cause && e.cause.code) || (e && e.message) || "unknown";
+      console.error("[create-order] gateway fetch threw after " + (Date.now() - t0) + "ms: " + (e && e.name) + ": " + cause);
       if (e && (e.name === "AbortError" || /abort|timeout/i.test(e.message || ""))) {
         return fail(res, 504, "Payment gateway timeout, try again");
       }
-      return fail(res, 502, "Payment gateway unreachable, try again");
+      await new Promise((r) => setTimeout(r, 3000));
+      try {
+        gw = await postJson(ZAP_CREATE, gwBody, 25000);
+      } catch (e2) {
+        const cause2 = (e2 && e2.cause && e2.cause.code) || (e2 && e2.message) || "unknown";
+        console.error("[create-order] gateway retry failed after " + (Date.now() - t0) + "ms: " + (e2 && e2.name) + ": " + cause2);
+        if (e2 && (e2.name === "AbortError" || /abort|timeout/i.test(e2.message || ""))) {
+          return fail(res, 504, "Payment gateway timeout, try again");
+        }
+        return fail(res, 502, "Payment gateway unreachable (" + String(cause2).slice(0, 60) + "), try again");
+      }
     }
     console.error("[create-order] gateway done in " + (Date.now() - t0) + "ms http=" + gw.http + " status=" + (gw.json && gw.json.status));
     if (gw.json.status !== "success" || !gw.json.payment_url) {
@@ -141,7 +152,7 @@ router.post("/webhook", async (req, res) => {
           confirmed = confirmedPaid(gw.json);
           if (!confirmed) console.error("Webhook confirm not-paid order=" + order_id + " http=" + gw.http + " body=" + (gw.raw || ""));
         } catch (e) {
-          console.error("Webhook confirm failed:", e.message);
+          console.error("Webhook confirm failed:", (e && e.cause && e.cause.code) || e.message);
         }
       }
       if (!confirmed) {
