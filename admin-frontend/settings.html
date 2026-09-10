@@ -101,6 +101,11 @@ class="w-full border border-violet-200 rounded-2xl px-4 py-3 focus:outline-none 
 <label class="block text-sm font-bold mb-1.5">Terms &amp; Conditions</label>
 <textarea id="terms" rows="4" maxlength="5000" class="w-full border border-violet-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70"></textarea>
 </div>
+<div>
+<label class="block text-sm font-bold mb-1.5">Home Banners (max 5)</label>
+<p class="text-xs text-slate-400 mb-2">Image URL must start with https:// — tapping a banner in the app opens its link (optional).</p>
+<div id="bannerRows" class="space-y-2.5"></div>
+</div>
 <button id="saveBtn" type="submit" class="btn-grad text-white font-bold rounded-2xl px-6 py-3.5 w-full sm:w-auto">Save settings</button>
 </form>
 <div id="toast" class="hidden max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg"></div>
@@ -128,6 +133,35 @@ function showToast(msg, ok) {
   toast.className = "toast-in max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg " +
     (ok ? "bg-emerald-500 text-white" : "bg-rose-500 text-white");
 }
+const bannerRows = document.getElementById("bannerRows");
+function bannerRow(i) {
+  const d = document.createElement("div");
+  d.className = "space-y-1.5 rounded-2xl border border-violet-100 bg-white/50 p-3";
+  d.innerHTML =
+    '<p class="text-xs font-bold text-slate-500">Banner ' + (i + 1) + '</p>' +
+    '<input data-bimg="' + i + '" type="url" maxlength="500" placeholder="Image URL https://..." ' +
+    'class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70" />' +
+    '<input data-blink="' + i + '" type="url" maxlength="500" placeholder="Link URL https://... (optional)" ' +
+    'class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70" />';
+  return d;
+}
+for (let i = 0; i < 5; i++) bannerRows.appendChild(bannerRow(i));
+function getBannerInputs() {
+  const out = [];
+  for (let i = 0; i < 5; i++) {
+    const img = bannerRows.querySelector('[data-bimg="' + i + '"]').value.trim();
+    const link = bannerRows.querySelector('[data-blink="' + i + '"]').value.trim();
+    if (img) out.push({ img, link });
+  }
+  return out;
+}
+function setBannerInputs(list) {
+  for (let i = 0; i < 5; i++) {
+    const b = Array.isArray(list) && list[i] ? list[i] : {};
+    bannerRows.querySelector('[data-bimg="' + i + '"]').value = b.img || "";
+    bannerRows.querySelector('[data-blink="' + i + '"]').value = b.link || "";
+  }
+}
 (async () => {
   try {
     const data = await Api.getSettings();
@@ -140,6 +174,7 @@ function showToast(msg, ok) {
     document.getElementById("about").value = data.about || "";
     document.getElementById("privacy").value = data.privacy || "";
     document.getElementById("terms").value = data.terms || "";
+    setBannerInputs(data.banners);
   } catch (e) {
     showToast(e.message, false);
   }
@@ -152,6 +187,17 @@ form.addEventListener("submit", async (e) => {
   if (url && !/^https:\/\/.+/i.test(url)) {
     showToast("Link must start with https://", false);
     return;
+  }
+  const banners = getBannerInputs();
+  for (const b of banners) {
+    if (!/^https:\/\/.+/i.test(b.img)) {
+      showToast("Banner image must start with https://", false);
+      return;
+    }
+    if (b.link && !/^https:\/\/.+/i.test(b.link)) {
+      showToast("Banner link must start with https://", false);
+      return;
+    }
   }
   btn.disabled = true;
   btn.textContent = "Saving...";
@@ -166,6 +212,7 @@ form.addEventListener("submit", async (e) => {
       about: document.getElementById("about").value.trim(),
       privacy: document.getElementById("privacy").value.trim(),
       terms: document.getElementById("terms").value.trim(),
+      banners: banners,
     });
     showToast("Settings saved!", true);
   } catch (ex) {
