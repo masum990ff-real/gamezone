@@ -39,6 +39,12 @@ Payment API</a>
 <a href="/users.html" class="nav-active flex items-center gap-3 px-4 py-3 rounded-2xl text-white">
 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
 Users</a>
+<a href="/deposits.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 7H9.5a3 3 0 000 6h5a3 3 0 010 6H6"/></svg>
+Deposits</a>
+<a href="/withdraw.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
+Withdraw</a>
 </nav>
 <button onclick="Api.logout()" class="text-left px-4 py-3 rounded-2xl text-rose-300 hover:bg-white/10 font-semibold text-sm mt-auto transition">Logout</button>
 </aside>
@@ -73,6 +79,11 @@ Users</a>
 </table>
 </div>
 </div>
+<div class="flex items-center justify-between mt-4 anim-in d2">
+<button id="prevBtn" class="glass card-lift shadow-lg rounded-2xl px-5 py-2.5 font-bold text-violet-700 text-sm disabled:opacity-40">← Prev</button>
+<span id="pageInfo" class="text-sm text-slate-500 font-medium"></span>
+<button id="nextBtn" class="glass card-lift shadow-lg rounded-2xl px-5 py-2.5 font-bold text-violet-700 text-sm disabled:opacity-40">Next →</button>
+</div>
 </main>
 </div>
 <script src="/js/api.js"></script>
@@ -99,13 +110,18 @@ function escapeHtml(s) {
   return String(s || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
 
+let page = 1;
+const limit = 20;
+let totalPages = 1;
 async function load() {
   hideError();
   document.getElementById("rows").innerHTML = [1, 2, 3].map(() =>
     `<tr><td colspan="4" class="px-5 py-4"><div class="shimmer h-5">&nbsp;</div></td></tr>`).join("");
   try {
-    const data = await Api.getUsers();
-    document.getElementById("userCount").textContent = `${data.items.length} total users`;
+    const data = await Api.getUsers(page, limit);
+    totalPages = data.totalPages || 1;
+    document.getElementById("userCount").textContent = `${data.total} total users`;
+    document.getElementById("pageInfo").textContent = `Page ${data.page} of ${totalPages}`;
     document.getElementById("rows").innerHTML = data.items.map((u) => `
       <tr class="hover:bg-violet-50/60 transition">
         <td class="px-5 py-3.5">
@@ -124,6 +140,8 @@ async function load() {
             : `<button onclick="ban('${u.uid}')" class="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl px-4 py-2 transition">Ban</button>`}
         </td>
       </tr>`).join("") || `<tr><td colspan="4" class="px-5 py-8 text-center text-sm text-slate-400">No users yet — accounts appear after first signup</td></tr>`;
+    document.getElementById("prevBtn").disabled = page <= 1;
+    document.getElementById("nextBtn").disabled = page >= totalPages;
   } catch (e) {
     document.getElementById("rows").innerHTML = "";
     showError(e.message);
@@ -144,6 +162,8 @@ async function unban(uid) {
 }
 document.getElementById("refreshBtn").addEventListener("click", load);
 document.getElementById("retryBtn").addEventListener("click", load);
+document.getElementById("prevBtn").addEventListener("click", () => { if (page > 1) { page--; load(); } });
+document.getElementById("nextBtn").addEventListener("click", () => { if (page < totalPages) { page++; load(); } });
 load();
 </script>
 </body>
