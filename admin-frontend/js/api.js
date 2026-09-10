@@ -76,6 +76,7 @@ const Api = (() => {
           about: s.about || "",
           privacy: s.privacy || "",
           terms: s.terms || "",
+          banners: Array.isArray(s.banners) ? s.banners : [],
         }),
       }),
     getHealth: () => fetch("/api/health").then((r) => r.json()),
