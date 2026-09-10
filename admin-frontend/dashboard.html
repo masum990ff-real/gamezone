@@ -39,6 +39,12 @@ Settings</a>
 <a href="/payment-api.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
 Payment API</a>
+<a href="/deposits.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 7H9.5a3 3 0 000 6h5a3 3 0 010 6H6"/></svg>
+Deposits</a>
+<a href="/withdraw.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
+Withdraw</a>
 </nav>
 <button onclick="Api.logout()" class="text-left px-4 py-3 rounded-2xl text-rose-300 hover:bg-white/10 font-semibold text-sm mt-auto transition">Logout</button>
 </aside>
@@ -143,28 +149,31 @@ async function load() {
   dEl.classList.add("shimmer");
   nEl.classList.add("shimmer");
   uEl.classList.add("shimmer");
-  try {
-    const [s, h] = await Promise.all([Api.getStats(), Api.getHistory(1, 5)]);
-    dEl.classList.remove("shimmer");
-    nEl.classList.remove("shimmer");
-    uEl.classList.remove("shimmer");
-    countUp(dEl, s.devices);
-    countUp(nEl, s.notifications);
-    countUp(uEl, s.users || 0);
-    document.getElementById("recentList").innerHTML = h.items.map((n) => `
+  const [statsRes, histRes] = await Promise.allSettled([Api.getStats(), Api.getHistory(1, 5)]);
+  dEl.classList.remove("shimmer");
+  nEl.classList.remove("shimmer");
+  uEl.classList.remove("shimmer");
+  if (statsRes.status === "fulfilled") {
+    const s = statsRes.value;
+    countUp(dEl, Number(s.devices) || 0);
+    countUp(nEl, Number(s.notifications) || 0);
+    countUp(uEl, Number(s.users) || 0);
+  } else {
+    showError(statsRes.reason.message);
+  }
+  if (histRes.status === "fulfilled") {
+    const h = histRes.value;
+    document.getElementById("recentList").innerHTML = (h.items || []).map((n) => `
       <li class="px-5 py-3.5 flex gap-3 items-start">
         <span class="mt-1.5 w-2.5 h-2.5 rounded-full shrink-0" style="background: var(--grad);"></span>
         <div class="min-w-0">
           <p class="font-bold text-sm">${escapeHtml(n.title)}</p>
           <p class="text-xs text-slate-500 truncate mt-0.5">${escapeHtml(n.body)}</p>
-          <p class="text-xs text-slate-400 mt-1">${new Date(n.sentAt).toLocaleString()} · Reach ~${n.successCount}</p>
+          <p class="text-xs text-slate-400 mt-1">${escapeHtml(n.sentAt ? new Date(n.sentAt).toLocaleString() : "—")} · Reach ~${Number(n.successCount) || 0}</p>
         </div>
       </li>`).join("") || `<li class="px-5 py-6 text-center text-sm text-slate-400">No notifications sent yet — send your first one!</li>`;
-  } catch (e) {
-    dEl.classList.remove("shimmer");
-    nEl.classList.remove("shimmer");
-    uEl.classList.remove("shimmer");
-    showError(e.message);
+  } else if (statsRes.status === "fulfilled") {
+    showError(histRes.reason.message);
   }
 }
 document.getElementById("refreshBtn").addEventListener("click", load);
