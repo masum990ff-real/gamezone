@@ -20,26 +20,50 @@ router.get("/resolve-refer", syncLimiter, async (req, res) => {
   }
 });
 
+router.get("/resolve-username", syncLimiter, async (req, res) => {
+  try {
+    const name = String(req.query.u || "").trim();
+    if (!/^(?=.*[A-Za-z])[A-Za-z0-9_]{3,30}$/.test(name)) {
+      return fail(res, 400, "Username 3-30 chars, must include a letter");
+    }
+    const db = getDb();
+    const snap = await db.collection("users").where("username", "==", name).limit(1).get();
+    if (!snap.empty) return fail(res, 409, "Username already taken");
+    return ok(res, { username: name }, "Username available");
+  } catch (e) {
+    console.error("Resolve username failed:", e.message);
+    return fail(res, 500, "Failed to check username: " + friendlyFirestoreError(e));
+  }
+});
+
 router.post("/sync", firebaseAuthMiddleware, syncLimiter, async (req, res) => {
   try {
     const { username, phone, referCode } = req.body || {};
-    if (username && !/^[A-Za-z0-9_]{3,30}$/.test(username)) {
-      return fail(res, 400, "Username 3-30 chars, letters/numbers/underscore only");
-    }
-    const digits = String(phone || "").replace(/\D/g, "");
-    if (phone && !/^\d{6,15}$/.test(digits)) {
-      return fail(res, 400, "Invalid phone number");
-    }
     const db = getDb();
     const usersCol = db.collection("users");
+    const ref = usersCol.doc(req.user.uid);
+    const snap = await ref.get();
+    const isNew = !snap.exists;
+    if (isNew) {
+      if (!/^(?=.*[A-Za-z])[A-Za-z0-9_]{3,30}$/.test(username || "")) {
+        return fail(res, 400, "Username 3-30 chars, must include a letter");
+      }
+      if (!/^\d{10}$/.test(String(phone || "").replace(/\D/g, ""))) {
+        return fail(res, 400, "Phone number must be exactly 10 digits");
+      }
+    } else if (username && !/^(?=.*[A-Za-z])[A-Za-z0-9_]{3,30}$/.test(username)) {
+      return fail(res, 400, "Username 3-30 chars, must include a letter");
+    }
+    const digits = String(phone || "").replace(/\D/g, "");
+    if (phone && !/^\d{10}$/.test(digits)) {
+      return fail(res, 400, "Phone number must be exactly 10 digits");
+    }
     if (username) {
       const dup = await usersCol.where("username", "==", username).limit(1).get();
       if (!dup.empty && dup.docs[0].id !== req.user.uid) {
         return fail(res, 400, "Username already taken");
       }
     }
-    const ref = usersCol.doc(req.user.uid);
-    const snap = await ref.get();
     const now = new Date().toISOString();
     if (snap.exists) {
       const update = { lastActive: now };
@@ -70,6 +94,7 @@ router.post("/sync", firebaseAuthMiddleware, syncLimiter, async (req, res) => {
         coins: bonus,
         depositCoins: 0,
         winCoins: 0,
+        lifetimeWin: 0,
         banned: false,
         banReason: "",
         createdAt: now,
@@ -111,11 +136,15 @@ router.get("/me", firebaseAuthMiddleware, async (req, res) => {
 
 router.get("/", authMiddleware, async (req, res) => {
   try {
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
     const db = getDb();
-    const snap = await db.collection("users").orderBy("lastActive", "desc").limit(limit).get();
+    const col = db.collection("users");
+    const totalSnap = await col.count().get();
+    const total = totalSnap.data().count;
+    const snap = await col.orderBy("lastActive", "desc").limit(limit).offset((page - 1) * limit).get();
     const items = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
-    return ok(res, { items, total: items.length }, "");
+    return ok(res, { items, page, limit, total, totalPages: Math.ceil(total / limit) }, "");
   } catch (e) {
     console.error("User list failed:", e.message);
     return fail(res, 500, "Failed to load users: " + friendlyFirestoreError(e));
