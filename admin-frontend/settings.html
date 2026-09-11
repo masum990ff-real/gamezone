@@ -109,7 +109,7 @@ class="w-full border border-violet-200 rounded-2xl px-4 py-3 focus:outline-none 
 </div>
 <div>
 <label class="block text-sm font-bold mb-1.5">Home Banners (max 5)</label>
-<p class="text-xs text-slate-400 mb-2">Upload an image (max 5MB each) — tapping a banner in the app opens its link (optional).</p>
+<p class="text-xs text-slate-400 mb-2">Paste an image URL (must start with https://) — tapping a banner in the app opens its link (optional).</p>
 <div id="bannerRows" class="space-y-2.5"></div>
 </div>
 <button id="saveBtn" type="submit" class="btn-grad text-white font-bold rounded-2xl px-6 py-3.5 w-full sm:w-auto">Save settings</button>
@@ -145,51 +145,13 @@ function bannerRow(i) {
   d.className = "space-y-1.5 rounded-2xl border border-violet-100 bg-white/50 p-3";
   d.innerHTML =
     '<p class="text-xs font-bold text-slate-500">Banner ' + (i + 1) + '</p>' +
-    '<input data-bimg="' + i + '" type="hidden" value="" />' +
-    '<div class="flex items-center gap-2">' +
-    '<button type="button" data-bup="' + i + '" class="btn-grad text-white text-xs font-bold rounded-2xl px-4 py-2">Upload</button>' +
-    '<span data-bname="' + i + '" class="text-xs text-slate-500 truncate"></span>' +
-    '<span data-bstatus="' + i + '" class="text-xs text-slate-400"></span>' +
-    '<input data-bfile="' + i + '" type="file" accept="image/*" class="hidden" />' +
-    '</div>' +
-    '<img data-bpreview="' + i + '" class="hidden rounded-xl w-full h-24 object-cover" alt="" />' +
+    '<input data-bimg="' + i + '" type="url" maxlength="500" placeholder="Image URL https://..." ' +
+    'class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70" />' +
     '<input data-blink="' + i + '" type="url" maxlength="500" placeholder="Link URL https://... (optional)" ' +
     'class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70" />';
   return d;
 }
 for (let i = 0; i < 5; i++) bannerRows.appendChild(bannerRow(i));
-bannerRows.addEventListener("click", (e) => {
-  const b = e.target.closest("[data-bup]");
-  if (!b) return;
-  bannerRows.querySelector('[data-bfile="' + b.getAttribute("data-bup") + '"]').click();
-});
-bannerRows.addEventListener("change", async (e) => {
-  const f = e.target.closest("[data-bfile]");
-  if (!f || !f.files || !f.files[0]) return;
-  const i = f.getAttribute("data-bfile");
-  const file = f.files[0];
-  const st = bannerRows.querySelector('[data-bstatus="' + i + '"]');
-  f.value = "";
-  if (file.size > 5 * 1024 * 1024) {
-    showToast("Image must be under 5MB", false);
-    return;
-  }
-  st.textContent = "Uploading...";
-  try {
-    const data = await Api.uploadBanner(file);
-    const url = data.url || "";
-    bannerRows.querySelector('[data-bimg="' + i + '"]').value = url;
-    const prev = bannerRows.querySelector('[data-bpreview="' + i + '"]');
-    prev.src = url;
-    prev.classList.remove("hidden");
-    bannerRows.querySelector('[data-bname="' + i + '"]').textContent = file.name;
-    st.textContent = "Uploaded";
-    showToast("Banner uploaded — press Save settings", true);
-  } catch (ex) {
-    st.textContent = "";
-    showToast(ex.message, false);
-  }
-});
 function getBannerInputs() {
   const out = [];
   for (let i = 0; i < 5; i++) {
@@ -204,16 +166,6 @@ function setBannerInputs(list) {
     const b = Array.isArray(list) && list[i] ? list[i] : {};
     bannerRows.querySelector('[data-bimg="' + i + '"]').value = b.img || "";
     bannerRows.querySelector('[data-blink="' + i + '"]').value = b.link || "";
-    const prev = bannerRows.querySelector('[data-bpreview="' + i + '"]');
-    if (b.img) {
-      prev.src = b.img;
-      prev.classList.remove("hidden");
-      bannerRows.querySelector('[data-bname="' + i + '"]').textContent = "Uploaded image";
-    } else {
-      prev.removeAttribute("src");
-      prev.classList.add("hidden");
-      bannerRows.querySelector('[data-bname="' + i + '"]').textContent = "";
-    }
   }
 }
 (async () => {
