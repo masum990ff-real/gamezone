@@ -1,4 +1,3 @@
-
 const admin = require("firebase-admin");
 const { getFirestore } = require("firebase-admin/firestore");
 const fs = require("fs");
@@ -53,4 +52,11 @@ function friendlyFirestoreError(e) {
   return raw;
 }
 
-module.exports = { admin, getApp, getDb, getRtdb, getMessaging, friendlyFirestoreError };
+function getBucket() {
+  getApp();
+  const { getStorage } = require("firebase-admin/storage");
+  const name = process.env.FIREBASE_STORAGE_BUCKET || "gamezone-5.firebasestorage.app";
+  return getStorage().bucket(name);
+}
+
+module.exports = { admin, getApp, getDb, getRtdb, getMessaging, friendlyFirestoreError, getBucket };
