@@ -69,6 +69,11 @@ router.post("/sync", firebaseAuthMiddleware, syncLimiter, async (req, res) => {
       const update = { lastActive: now };
       if (username) update.username = username;
       if (digits) update.phone = digits;
+      const old = snap.data() || {};
+      if (old.bonusCoins === undefined && (old.coins || 0) > 0) {
+        update.bonusCoins = old.coins;
+        update.coins = 0;
+      }
       await ref.set(update, { merge: true });
     } else {
       let bonus = 0;
@@ -91,7 +96,8 @@ router.post("/sync", firebaseAuthMiddleware, syncLimiter, async (req, res) => {
         email: req.user.email || "",
         username: username || "",
         phone: digits,
-        coins: bonus,
+        coins: 0,
+        bonusCoins: bonus,
         depositCoins: 0,
         winCoins: 0,
         lifetimeWin: 0,
@@ -101,7 +107,7 @@ router.post("/sync", firebaseAuthMiddleware, syncLimiter, async (req, res) => {
         lastActive: now,
       });
       if (referrerUid && bonus > 0) {
-        batch.update(usersCol.doc(referrerUid), { coins: FieldValue.increment(bonus) });
+        batch.update(usersCol.doc(referrerUid), { bonusCoins: FieldValue.increment(bonus) });
         batch.set(db.collection("referrals").doc(req.user.uid), {
           by: referrerUid,
           code,
