@@ -20,6 +20,7 @@ app.use("/api/settings", require("./routes/settings"));
 app.use("/api/payment-config", require("./routes/payment-config"));
 app.use("/api/payments", require("./routes/payments"));
 app.use("/api/deposits", require("./routes/deposits"));
+app.use("/api/uploads", require("./routes/uploads"));
 
 app.get("/api/health", async (req, res) => {
   try {
@@ -38,4 +39,4 @@ app.use(express.static(path.join(__dirname, "../admin-frontend")));
 
 app.use((err, req, res, next) => fail(res, 500, "Internal server error"));
 
-app.listen(PORT, () => console.log("GameZone backend v1.2.5 starting on :" + PORT));
+app.listen(PORT, () => console.log("GameZone backend v1.4.0 starting on :" + PORT));
