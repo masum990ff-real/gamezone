@@ -147,11 +147,43 @@ function bannerRow(i) {
     '<p class="text-xs font-bold text-slate-500">Banner ' + (i + 1) + '</p>' +
     '<input data-bimg="' + i + '" type="url" maxlength="500" placeholder="Image URL https://..." ' +
     'class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70" />' +
+    '<div class="flex items-center gap-2">' +
+    '<button type="button" data-bup="' + i + '" class="btn-grad text-white text-xs font-bold rounded-2xl px-4 py-2">Upload</button>' +
+    '<span data-bstatus="' + i + '" class="text-xs text-slate-400"></span>' +
+    '<input data-bfile="' + i + '" type="file" accept="image/*" class="hidden" />' +
+    '</div>' +
     '<input data-blink="' + i + '" type="url" maxlength="500" placeholder="Link URL https://... (optional)" ' +
     'class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70" />';
   return d;
 }
 for (let i = 0; i < 5; i++) bannerRows.appendChild(bannerRow(i));
+bannerRows.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-bup]");
+  if (!b) return;
+  bannerRows.querySelector('[data-bfile="' + b.getAttribute("data-bup") + '"]').click();
+});
+bannerRows.addEventListener("change", async (e) => {
+  const f = e.target.closest("[data-bfile]");
+  if (!f || !f.files || !f.files[0]) return;
+  const i = f.getAttribute("data-bfile");
+  const file = f.files[0];
+  const st = bannerRows.querySelector('[data-bstatus="' + i + '"]');
+  f.value = "";
+  if (file.size > 1024 * 1024) {
+    showToast("Image must be under 1MB", false);
+    return;
+  }
+  st.textContent = "Uploading...";
+  try {
+    const data = await Api.uploadBanner(file);
+    bannerRows.querySelector('[data-bimg="' + i + '"]').value = data.url || "";
+    st.textContent = "Uploaded";
+    showToast("Banner uploaded — press Save settings", true);
+  } catch (ex) {
+    st.textContent = "";
+    showToast(ex.message, false);
+  }
+});
 function getBannerInputs() {
   const out = [];
   for (let i = 0; i < 5; i++) {
