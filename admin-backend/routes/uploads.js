@@ -8,7 +8,7 @@ const router = express.Router();
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file && file.mimetype && file.mimetype.startsWith("image/")) return cb(null, true);
     return cb(new Error("Only image files allowed"));
@@ -28,14 +28,16 @@ router.post("/banner", authMiddleware, uploadLimiter, upload.single("banner"), a
   } catch (e) {
     console.error("Banner upload failed:", e.message);
     if (/Only image/.test(e.message)) return fail(res, 400, "Only image files allowed");
-    if (/File too large|LIMIT_FILE_SIZE/.test(e.message)) return fail(res, 400, "Image must be under 1MB");
+    if (/File too large|LIMIT_FILE_SIZE/.test(e.message)) return fail(res, 400, "Image must be under 5MB");
+    if (/bucket.*not.*exist|notFound|No such object|404/i.test(e.message || "") || e.code === 404)
+      return fail(res, 500, "Storage bucket not found — open Firebase Console → Storage → Get started, and check FIREBASE_STORAGE_BUCKET env on Render");
     return fail(res, 500, "Upload failed: " + (e.message || e));
   }
 });
 
 router.use((err, req, res, next) => {
   if (!err) return next();
-  if (err.code === "LIMIT_FILE_SIZE") return fail(res, 400, "Image must be under 1MB");
+  if (err.code === "LIMIT_FILE_SIZE") return fail(res, 400, "Image must be under 5MB");
   return fail(res, 400, err.message || "Upload failed");
 });
 
