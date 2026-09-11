@@ -52,11 +52,4 @@ function friendlyFirestoreError(e) {
   return raw;
 }
 
-function getBucket() {
-  getApp();
-  const { getStorage } = require("firebase-admin/storage");
-  const name = process.env.FIREBASE_STORAGE_BUCKET || "gamezone-5.firebasestorage.app";
-  return getStorage().bucket(name);
-}
-
-module.exports = { admin, getApp, getDb, getRtdb, getMessaging, friendlyFirestoreError, getBucket };
+module.exports = { admin, getApp, getDb, getRtdb, getMessaging, friendlyFirestoreError };
