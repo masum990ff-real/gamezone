@@ -39,4 +39,7 @@ app.use(express.static(path.join(__dirname, "../admin-frontend")));
 
 app.use((err, req, res, next) => fail(res, 500, "Internal server error"));
 
-app.listen(PORT, () => console.log("GameZone backend v1.4.0 starting on :" + PORT));
+app.listen(PORT, () => {
+  console.log("GameZone backend v1.5.0 starting on :" + PORT);
+  console.log("Storage bucket: " + (process.env.FIREBASE_STORAGE_BUCKET || "gamezone-5.firebasestorage.app"));
+});
