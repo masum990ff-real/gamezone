@@ -89,5 +89,28 @@ const Api = (() => {
         method: "PUT",
         body: JSON.stringify({ zapKey }),
       }),
+    uploadBanner: async (file) => {
+      const token = getToken();
+      const fd = new FormData();
+      fd.append("banner", file);
+      const res = await fetch("/api/uploads/banner", {
+        method: "POST",
+        headers: token ? { Authorization: "Bearer " + token } : {},
+        body: fd,
+      });
+      let body = {};
+      try {
+        body = await res.json();
+      } catch (e) {
+        body = { success: false, message: "Server error" };
+      }
+      if (res.status === 401) {
+        clearToken();
+        location.href = "/login.html";
+        throw new Error("Unauthorized");
+      }
+      if (!body.success) throw new Error(body.message || "Upload failed");
+      return body.data;
+    },
   };
 })();
