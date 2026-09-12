@@ -66,6 +66,11 @@ function gwCause(e) {
   return (e && e.cause && e.cause.code) || (e && e.message) || "unknown";
 }
 
+function warnOrderStatusContract(orderId, where, top, message) {
+  if (String(top || "").trim().toLowerCase() !== "error") return;
+  console.error("[order-status] WARNING " + where + " order=" + orderId + " not found by gateway despite create-order 200 — our request already matches ZapUPI doc (POST https://pay.zapupi.com/api/order-status {zap_key, order_id}); test orders look invisible to order-status, confirm contract + test-visibility with ZapUPI support. gateway message=" + String(message || "").slice(0, 120));
+}
+
 async function markDisplaySuccess(rtdb, orderId, uid, txn, utr) {
   const now = new Date().toISOString();
   try {
@@ -278,6 +283,7 @@ router.post("/:orderId/refresh", firebaseAuthMiddleware, payLimiter, async (req,
     const gs = String(d.status || "");
     const local = gatewayLocalStatus(gs);
     console.error("[order-status] refresh order=" + orderId + " http=" + gw.http + " top=" + String(gw.json && gw.json.status) + " gs=" + gs + " local=" + local + " raw=" + String(gw.raw || "").slice(0, 300));
+    warnOrderStatusContract(orderId, "refresh", gw.json && gw.json.status, gw.json && gw.json.message);
     const recRef = rtdb.ref("payments/byUid/" + uid + "/" + orderId);
     const now = new Date().toISOString();
     let curStatus = "";
@@ -324,7 +330,8 @@ router.post("/:orderId/refresh", firebaseAuthMiddleware, payLimiter, async (req,
 
 router.post("/webhook", async (req, res) => {
   try {
-    const { order_id, status, txn_id, utr, environment } = req.body || {};
+    const { order_id, status, txn_id, amount, utr, environment } = req.body || {};
+    console.error("[webhook] order=" + String(order_id || "").slice(0, 40) + " status=" + String(status || "").slice(0, 20) + " amount=" + String(amount == null ? "" : amount).slice(0, 20) + " utr=" + String(utr || "").slice(0, 40) + " env=" + String(environment || "").slice(0, 20) + " txn=" + String(txn_id || "").slice(0, 40));
     if (!order_id) {
       return res.status(200).json({ status: "ok" });
     }
@@ -351,6 +358,7 @@ router.post("/webhook", async (req, res) => {
         const gw = await postJson(ZAP_STATUS, { zap_key: zapKey, order_id }, 30000);
         confirmed = confirmedPaid(gw.json);
         console.error("[order-status] webhook order=" + order_id + " http=" + gw.http + " top=" + String(gw.json && gw.json.status) + " gs=" + String((gw.json && gw.json.data && gw.json.data.status) || "") + " confirmed=" + (!!confirmed) + " raw=" + String(gw.raw || "").slice(0, 300));
+        warnOrderStatusContract(order_id, "webhook", gw.json && gw.json.status, gw.json && gw.json.message);
         if (!confirmed) console.error("Webhook unconfirmed success:", order_id);
       } catch (e) {
         console.error("Webhook confirm failed:", gwCause(e));
