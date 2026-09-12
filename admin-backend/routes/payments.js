@@ -344,7 +344,7 @@ router.post("/webhook", async (req, res) => {
     const uid = ptr.val().uid;
     const recRef = rtdb.ref("payments/byUid/" + uid + "/" + order_id);
     const wst = String(status || "").trim().toLowerCase();
-    if (wst === "success" || wst === "paid" || wst === "successful" || wst === "completed" || wst === "approved" || wst === "test") {
+    if (wst === "success" || wst === "paid" || wst === "successful" || wst === "completed" || wst === "complete" || wst === "approved" || wst === "test" || wst === "captured") {
       await markDisplaySuccess(rtdb, order_id, uid, txn_id, utr);
       let zapKey = "";
       try {
