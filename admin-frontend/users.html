@@ -64,6 +64,13 @@ Withdraw</a>
 <button id="retryBtn" class="ml-2 font-bold underline">Retry</button>
 </div>
 
+<div class="flex flex-wrap items-center gap-2 mb-4 anim-in d1">
+<input id="searchInput" type="text" maxlength="30" placeholder="Search username..."
+class="flex-1 min-w-[180px] border border-violet-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70" />
+<button id="searchBtn" class="btn-grad text-white rounded-2xl px-5 py-2.5 text-sm font-bold">Search</button>
+<button id="clearBtn" class="glass card-lift shadow-lg rounded-2xl px-5 py-2.5 text-sm font-bold text-violet-700">Clear</button>
+</div>
+
 <div class="glass shadow-xl rounded-3xl overflow-hidden anim-in d1">
 <div class="overflow-x-auto">
 <table class="w-full text-sm min-w-[680px]">
@@ -113,12 +120,13 @@ function escapeHtml(s) {
 let page = 1;
 const limit = 20;
 let totalPages = 1;
+let query = "";
 async function load() {
   hideError();
   document.getElementById("rows").innerHTML = [1, 2, 3].map(() =>
     `<tr><td colspan="4" class="px-5 py-4"><div class="shimmer h-5">&nbsp;</div></td></tr>`).join("");
   try {
-    const data = await Api.getUsers(page, limit);
+    const data = await Api.getUsers(page, limit, query);
     totalPages = data.totalPages || 1;
     document.getElementById("userCount").textContent = `${data.total} total users`;
     document.getElementById("pageInfo").textContent = `Page ${data.page} of ${totalPages}`;
@@ -161,6 +169,9 @@ async function unban(uid) {
   } catch (e) { showError(e.message); }
 }
 document.getElementById("refreshBtn").addEventListener("click", load);
+document.getElementById("searchBtn").addEventListener("click", () => { query = document.getElementById("searchInput").value.trim(); page = 1; load(); });
+document.getElementById("clearBtn").addEventListener("click", () => { document.getElementById("searchInput").value = ""; query = ""; page = 1; load(); });
+document.getElementById("searchInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); query = e.target.value.trim(); page = 1; load(); } });
 document.getElementById("retryBtn").addEventListener("click", load);
 document.getElementById("prevBtn").addEventListener("click", () => { if (page > 1) { page--; load(); } });
 document.getElementById("nextBtn").addEventListener("click", () => { if (page < totalPages) { page++; load(); } });
