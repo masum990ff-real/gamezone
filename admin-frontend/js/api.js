@@ -58,8 +58,8 @@ const Api = (() => {
     getHistory: (page, limit) =>
       request(`/api/notifications/history?page=${page || 1}&limit=${limit || 20}`),
     getStats: () => request("/api/notifications/stats"),
-    getUsers: (page, limit) =>
-      request(`/api/users?page=${page || 1}&limit=${limit || 20}`),
+    getUsers: (page, limit, q) =>
+      request(`/api/users?page=${page || 1}&limit=${limit || 20}${q ? `&q=${encodeURIComponent(q)}` : ""}`),
     getDeposits: (page, limit) =>
       request(`/api/deposits?page=${page || 1}&limit=${limit || 20}`),
     banUser: (uid, reason) =>
@@ -75,6 +75,7 @@ const Api = (() => {
           rules: s.rules || "",
           referCoins: s.referCoins !== undefined ? s.referCoins : 5,
           downloadUrl: s.downloadUrl || "",
+          latestVersion: s.latestVersion || "",
           faq: s.faq || "",
           about: s.about || "",
           privacy: s.privacy || "",
