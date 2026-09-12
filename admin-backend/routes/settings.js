@@ -17,6 +17,7 @@ function readSettings(rtdb) {
       rules: v.rules || "",
       referCoins: v.referCoins !== undefined ? v.referCoins : 5,
       downloadUrl: v.downloadUrl || "",
+      latestVersion: v.latestVersion || "",
       faq: v.faq || "",
       about: v.about || "",
       privacy: v.privacy || "",
@@ -38,7 +39,7 @@ router.get("/", async (req, res) => {
 
 router.put("/", authMiddleware, async (req, res) => {
   try {
-    const { supportUrl, announcement, rules, referCoins, downloadUrl, faq, about, privacy, terms, banners } = req.body || {};
+    const { supportUrl, announcement, rules, referCoins, downloadUrl, latestVersion, faq, about, privacy, terms, banners } = req.body || {};
     if (supportUrl && !/^https:\/\/.+/i.test(supportUrl)) {
       return fail(res, 400, "Support link must start with https://");
     }
@@ -49,6 +50,13 @@ router.put("/", authMiddleware, async (req, res) => {
       return fail(res, 400, "Rules max 5000 chars");
     }
     const coins = Math.max(0, Math.min(10000, parseInt(referCoins) || 0));
+    let cleanVersion = "";
+    if (latestVersion !== undefined && latestVersion !== null && String(latestVersion).trim() !== "") {
+      cleanVersion = String(latestVersion).trim();
+      if (cleanVersion.length > 20 || !/^\d+(\.\d+){0,3}$/.test(cleanVersion)) {
+        return fail(res, 400, "Latest version format invalid (e.g. 1.5.3)");
+      }
+    }
     let cleanBanners = [];
     if (banners !== undefined) {
       if (!Array.isArray(banners)) return fail(res, 400, "Banners must be an array");
@@ -76,6 +84,7 @@ router.put("/", authMiddleware, async (req, res) => {
       rules: rules || "",
       referCoins: coins,
       downloadUrl: downloadUrl || "",
+      latestVersion: cleanVersion,
       faq: faq || "",
       about: about || "",
       privacy: privacy || "",
