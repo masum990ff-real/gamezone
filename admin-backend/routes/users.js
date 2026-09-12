@@ -144,8 +144,17 @@ router.get("/", authMiddleware, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const q = String(req.query.q || "").trim();
     const db = getDb();
     const col = db.collection("users");
+    if (q) {
+      const base = col.orderBy("username").startAt(q).endAt(q + "\uf8ff");
+      const totalSnap = await base.count().get();
+      const total = totalSnap.data().count;
+      const snap = await base.limit(limit).offset((page - 1) * limit).get();
+      const items = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+      return ok(res, { items, page, limit, total, totalPages: Math.ceil(total / limit) }, "");
+    }
     const totalSnap = await col.count().get();
     const total = totalSnap.data().count;
     const snap = await col.orderBy("lastActive", "desc").limit(limit).offset((page - 1) * limit).get();
