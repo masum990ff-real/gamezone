@@ -39,5 +39,5 @@ app.use(express.static(path.join(__dirname, "../admin-frontend")));
 app.use((err, req, res, next) => fail(res, 500, "Internal server error"));
 
 app.listen(PORT, () => {
-  console.log("GameZone backend v1.5.1 starting on :" + PORT);
+  console.log("GameZone backend v1.5.6 starting on :" + PORT);
 });
