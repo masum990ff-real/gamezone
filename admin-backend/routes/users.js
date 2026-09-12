@@ -23,8 +23,8 @@ router.get("/resolve-refer", syncLimiter, async (req, res) => {
 router.get("/resolve-username", syncLimiter, async (req, res) => {
   try {
     const name = String(req.query.u || "").trim();
-    if (!/^(?=.*[A-Za-z])[A-Za-z0-9_]{3,30}$/.test(name)) {
-      return fail(res, 400, "Username 3-30 chars, must include a letter");
+    if (!/^(?=.*[A-Za-z])[A-Za-z0-9_]{6,30}$/.test(name)) {
+      return fail(res, 400, "Username 6-30 chars, must include a letter");
     }
     const db = getDb();
     const snap = await db.collection("users").where("username", "==", name).limit(1).get();
@@ -33,6 +33,28 @@ router.get("/resolve-username", syncLimiter, async (req, res) => {
   } catch (e) {
     console.error("Resolve username failed:", e.message);
     return fail(res, 500, "Failed to check username: " + friendlyFirestoreError(e));
+  }
+});
+
+router.post("/resolve-login", syncLimiter, async (req, res) => {
+  try {
+    const identifier = String((req.body && req.body.identifier) || "").trim();
+    if (!identifier) return fail(res, 400, "Account not found");
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
+      return ok(res, { email: identifier }, "");
+    }
+    const db = getDb();
+    if (/^\d{10}$/.test(identifier)) {
+      const snap = await db.collection("users").where("phone", "==", identifier).limit(1).get();
+      if (snap.empty) return fail(res, 404, "Account not found");
+      return ok(res, { email: snap.docs[0].data().email || "" }, "");
+    }
+    const snap = await db.collection("users").where("username", "==", identifier).limit(1).get();
+    if (snap.empty) return fail(res, 404, "Account not found");
+    return ok(res, { email: snap.docs[0].data().email || "" }, "");
+  } catch (e) {
+    console.error("Resolve login failed:", e.message);
+    return fail(res, 500, "Failed to resolve login: " + friendlyFirestoreError(e));
   }
 });
 
@@ -45,14 +67,14 @@ router.post("/sync", firebaseAuthMiddleware, syncLimiter, async (req, res) => {
     const snap = await ref.get();
     const isNew = !snap.exists;
     if (isNew) {
-      if (!/^(?=.*[A-Za-z])[A-Za-z0-9_]{3,30}$/.test(username || "")) {
-        return fail(res, 400, "Username 3-30 chars, must include a letter");
+      if (!/^(?=.*[A-Za-z])[A-Za-z0-9_]{6,30}$/.test(username || "")) {
+        return fail(res, 400, "Username 6-30 chars, must include a letter");
       }
       if (!/^\d{10}$/.test(String(phone || "").replace(/\D/g, ""))) {
         return fail(res, 400, "Phone number must be exactly 10 digits");
       }
-    } else if (username && !/^(?=.*[A-Za-z])[A-Za-z0-9_]{3,30}$/.test(username)) {
-      return fail(res, 400, "Username 3-30 chars, must include a letter");
+    } else if (username && !/^(?=.*[A-Za-z])[A-Za-z0-9_]{6,30}$/.test(username)) {
+      return fail(res, 400, "Username 6-30 chars, must include a letter");
     }
     const digits = String(phone || "").replace(/\D/g, "");
     if (phone && !/^\d{10}$/.test(digits)) {
