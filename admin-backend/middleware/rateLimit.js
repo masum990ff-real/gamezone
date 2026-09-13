@@ -15,5 +15,6 @@ const syncLimiter = limiter(5, "Account limit: max 5 per minute, try again later
 const registerLimiter = limiter(60, "Too many requests, try again later");
 const sendLimiter = limiter(20, "Too many notifications, try again in a minute");
 const payLimiter = limiter(10, "Too many payment requests, try again in a minute");
+const catLimiter = limiter(30, "Too many category requests, try again in a minute");
 
-module.exports = { loginLimiter, syncLimiter, registerLimiter, sendLimiter, payLimiter };
+module.exports = { loginLimiter, syncLimiter, registerLimiter, sendLimiter, payLimiter, catLimiter };
