@@ -90,5 +90,11 @@ const Api = (() => {
         method: "PUT",
         body: JSON.stringify({ zapKey }),
       }),
+    getCategories: () => fetch("/api/categories").then((r) => r.json()).then((b) => { if (!b.success) throw new Error(b.message); return b.data; }),
+    addCategory: (name, img) =>
+      request("/api/categories", { method: "POST", body: JSON.stringify({ name, img }) }),
+    updateCategory: (id, name, img) =>
+      request(`/api/categories/${id}`, { method: "PUT", body: JSON.stringify({ name, img }) }),
+    deleteCategory: (id) => request(`/api/categories/${id}`, { method: "DELETE" }),
   };
 })();
