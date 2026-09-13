@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GameZone Admin - Categories</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/css/premium.css" />
+</head>
+<body class="min-h-screen text-slate-800">
+<div class="aurora"><span></span><span></span><span></span></div>
+<div class="flex min-h-screen">
+<button id="menuBtn" class="md:hidden fixed top-4 left-4 z-20 btn-grad text-white rounded-2xl px-3.5 py-2 font-bold">☰</button>
+<aside id="sidebar" class="hidden md:flex flex-col w-64 shrink-0 fixed md:static inset-y-0 left-0 z-10 p-6 text-white" style="background: linear-gradient(180deg, #0f0b2d, #2e1065 70%, #4c1d95);">
+<div class="flex items-center gap-2.5 mb-10">
+<div class="w-10 h-10 rounded-2xl bg-white text-lg font-extrabold flex items-center justify-center shadow-lg"><span class="grad-text">G</span></div>
+<div>
+<h2 class="text-lg font-extrabold leading-none">GameZone</h2>
+<p class="text-[11px] text-violet-300 mt-1">Admin Panel</p>
+</div>
+</div>
+<nav class="space-y-2 text-sm font-semibold">
+<a href="/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10"/></svg>
+Dashboard</a>
+<a href="/send-notification.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+Send Notification</a>
+<a href="/history.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+History</a>
+<a href="/users.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+Users</a>
+<a href="/categories.html" class="nav-active flex items-center gap-3 px-4 py-3 rounded-2xl text-white">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+Category Management</a>
+<a href="/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8l2.8-2.8M17 7l2.8-2.8"/></svg>
+Settings</a>
+<a href="/payment-api.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+Payment API</a>
+<a href="/deposits.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 7H9.5a3 3 0 000 6h5a3 3 0 010 6H6"/></svg>
+Deposits</a>
+<a href="/withdraw.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
+Withdraw</a>
+</nav>
+<button onclick="Api.logout()" class="text-left px-4 py-3 rounded-2xl text-rose-300 hover:bg-white/10 font-semibold text-sm mt-auto transition">Logout</button>
+</aside>
+<div id="overlay" class="hidden fixed inset-0 bg-black/40 z-[5] md:hidden"></div>
+<main class="flex-1 p-6 md:p-10 pt-16 md:pt-10 w-full max-w-4xl mx-auto">
+<div class="flex items-center justify-between mb-6 anim-in">
+<div>
+<h1 class="text-2xl md:text-3xl font-extrabold">Category <span class="grad-text">Management</span></h1>
+<p id="countInfo" class="text-sm text-slate-500 mt-1">Loading…</p>
+</div>
+<button id="refreshBtn" class="glass card-lift shadow-lg rounded-2xl px-4 py-2.5 text-sm font-bold text-violet-700">Refresh</button>
+</div>
+<div id="errorCard" class="hidden glass border-l-4 !border-l-rose-500 text-rose-700 rounded-2xl px-4 py-3 text-sm mb-4 shadow">
+<span id="errorText"></span>
+<button id="retryBtn" class="ml-2 font-bold underline">Retry</button>
+</div>
+<form id="addForm" class="anim-in d1 glass shadow-xl rounded-3xl p-6 space-y-4 mb-5">
+<p class="text-sm font-bold">Add category (max 15)</p>
+<div class="grid sm:grid-cols-2 gap-3">
+<input id="addName" type="text" maxlength="30" placeholder="Name (2-30 chars)" class="border border-violet-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70" />
+<input id="addImg" type="url" maxlength="500" placeholder="Image URL https://..." class="border border-violet-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70" />
+</div>
+<button id="addBtn" type="submit" class="btn-grad text-white font-bold rounded-2xl px-6 py-3">Add category</button>
+</form>
+<div class="glass shadow-xl rounded-3xl overflow-hidden anim-in d1">
+<div class="overflow-x-auto">
+<table class="w-full text-sm min-w-[640px]">
+<thead>
+<tr class="text-left text-xs uppercase tracking-wide text-violet-500 border-b border-violet-100 bg-violet-50/50">
+<th class="px-5 py-3.5">Image</th>
+<th class="px-5 py-3.5">Name</th>
+<th class="px-5 py-3.5 text-right">Action</th>
+</tr>
+</thead>
+<tbody id="rows" class="divide-y divide-violet-50"></tbody>
+</table>
+</div>
+</div>
+<div id="toast" class="hidden max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg"></div>
+</main>
+</div>
+<script src="/js/api.js"></script>
+<script>
+Api.requireAuth();
+const sidebar=document.getElementById("sidebar");
+const overlay=document.getElementById("overlay");
+function toggleMenu(force){const show=force!==undefined?force:sidebar.classList.contains("hidden");sidebar.classList.toggle("hidden",!show);overlay.classList.toggle("hidden",!show);}
+document.getElementById("menuBtn").addEventListener("click",()=>toggleMenu());
+overlay.addEventListener("click",()=>toggleMenu(false));
+function showError(msg){document.getElementById("errorText").textContent=msg;document.getElementById("errorCard").classList.remove("hidden");}
+function hideError(){document.getElementById("errorCard").classList.add("hidden");}
+function escapeHtml(s){return String(s||"").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function showToast(msg,ok){const t=document.getElementById("toast");t.textContent=msg;t.className="toast-in max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg "+(ok?"bg-emerald-500 text-white":"bg-rose-500 text-white");}
+async function load(){
+ hideError();
+ document.getElementById("rows").innerHTML=[1,2,3].map(()=>`<tr><td colspan="3" class="px-5 py-4"><div class="shimmer h-5">&nbsp;</div></td></tr>`).join("");
+ try{
+  const data=await Api.getCategories();
+  const list=data.categories||[];
+  document.getElementById("countInfo").textContent=list.length+"/15 categories";
+  document.getElementById("rows").innerHTML=list.map(c=>`
+   <tr class="hover:bg-violet-50/60 transition">
+     <td class="px-5 py-3.5"><img src="${escapeHtml(c.img)}" alt="" class="w-14 h-14 rounded-xl object-cover border border-violet-100" onerror="this.src='/css/premium.css'" /></td>
+     <td class="px-5 py-3.5 font-bold">${escapeHtml(c.name)}</td>
+     <td class="px-5 py-3.5 text-right space-x-2">
+       <button onclick="editCat('${c.id}','${escapeHtml(c.name).replace(/'/g,"\\'")}','${escapeHtml(c.img).replace(/'/g,"\\'")}')" class="bg-violet-500 hover:bg-violet-600 text-white text-xs font-bold rounded-xl px-4 py-2">Edit</button>
+       <button onclick="delCat('${c.id}')" class="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl px-4 py-2">Delete</button>
+     </td>
+   </tr>`).join("")||`<tr><td colspan="3" class="px-5 py-8 text-center text-sm text-slate-400">No categories yet — add your first one</td></tr>`;
+ }catch(e){document.getElementById("rows").innerHTML="";showError(e.message);}
+}
+async function delCat(id){
+ if(!confirm("Delete this category?")) return;
+ try{await Api.deleteCategory(id);showToast("Deleted",true);load();}catch(e){showToast(e.message,false);}
+}
+async function editCat(id,oldName,oldImg){
+ const name=prompt("Name (2-30 chars):",oldName);
+ if(name===null) return;
+ const img=prompt("Image URL https://:",oldImg);
+ if(img===null) return;
+ try{await Api.updateCategory(id,name.trim(),img.trim());showToast("Updated",true);load();}catch(e){showToast(e.message,false);}
+}
+document.getElementById("addForm").addEventListener("submit",async(e)=>{
+ e.preventDefault();
+ const name=document.getElementById("addName").value.trim();
+ const img=document.getElementById("addImg").value.trim();
+ if(!name||!img){showToast("Name and image URL required",false);return;}
+ const btn=document.getElementById("addBtn");
+ btn.disabled=true;btn.textContent="Adding...";
+ try{await Api.addCategory(name,img);document.getElementById("addName").value="";document.getElementById("addImg").value="";showToast("Category added!",true);load();}catch(ex){showToast(ex.message,false);}
+ btn.disabled=false;btn.textContent="Add category";
+});
+document.getElementById("refreshBtn").addEventListener("click",load);
+document.getElementById("retryBtn").addEventListener("click",load);
+load();
+</script>
+</body>
+</html>
