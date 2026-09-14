@@ -96,5 +96,16 @@ const Api = (() => {
     updateCategory: (id, name, img) =>
       request(`/api/categories/${id}`, { method: "PUT", body: JSON.stringify({ name, img }) }),
     deleteCategory: (id) => request(`/api/categories/${id}`, { method: "DELETE" }),
+    getMatches: (categoryId, status) => {
+      const p = new URLSearchParams();
+      if (categoryId) p.set("categoryId", categoryId);
+      if (status) p.set("status", status);
+      const q = p.toString() ? "?" + p.toString() : "";
+      return fetch("/api/matches" + q).then((r) => r.json()).then((b) => { if (!b.success) throw new Error(b.message); return b.data; });
+    },
+    getMatch: (id) => fetch(`/api/matches/${id}`).then((r) => r.json()).then((b) => { if (!b.success) throw new Error(b.message); return b.data; }),
+    createMatch: (payload) => request("/api/matches", { method: "POST", body: JSON.stringify(payload) }),
+    updateMatch: (id, payload) => request(`/api/matches/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+    deleteMatch: (id) => request(`/api/matches/${id}`, { method: "DELETE" }),
   };
 })();
