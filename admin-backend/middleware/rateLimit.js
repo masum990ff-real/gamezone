@@ -16,5 +16,7 @@ const registerLimiter = limiter(60, "Too many requests, try again later");
 const sendLimiter = limiter(20, "Too many notifications, try again in a minute");
 const payLimiter = limiter(10, "Too many payment requests, try again in a minute");
 const catLimiter = limiter(30, "Too many category requests, try again in a minute");
+const webhookLimiter = limiter(60, "Too many webhook calls, try again later");
+const matchEntryLimiter = limiter(5, "Too many entry attempts, try again in a minute");
 
-module.exports = { loginLimiter, syncLimiter, registerLimiter, sendLimiter, payLimiter, catLimiter };
+module.exports = { loginLimiter, syncLimiter, registerLimiter, sendLimiter, payLimiter, catLimiter, webhookLimiter, matchEntryLimiter };
