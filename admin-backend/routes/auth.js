@@ -23,7 +23,8 @@ router.post("/login", loginLimiter, async (req, res) => {
     });
     return ok(res, { token }, "Login successful");
   } catch (e) {
-    return fail(res, 500, "Login failed");
+    console.error("Login failed:", e.message);
+    return fail(res, 500, "Login failed: " + (e.message || e));
   }
 });
 
