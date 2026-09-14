@@ -8,8 +8,11 @@ const router = express.Router();
 router.post("/register-token", registerLimiter, async (req, res) => {
   try {
     const { token, deviceInfo } = req.body || {};
-    if (!token || typeof token !== "string" || token.length < 20) {
+    if (!token || typeof token !== "string" || token.length < 20 || token.length > 500) {
       return fail(res, 400, "Valid token required");
+    }
+    if (deviceInfo && (typeof deviceInfo !== "string" || deviceInfo.length > 200)) {
+      return fail(res, 400, "Device info too long");
     }
     const db = getDb();
     const docId = token.replace(/\//g, "_");
