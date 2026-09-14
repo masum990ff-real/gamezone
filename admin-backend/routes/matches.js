@@ -252,7 +252,7 @@ router.post("/:id/join",firebaseAuthMiddleware,catLimiter,async(req,res)=>{
    if(d.bonusCoins!==undefined) upd.bonusCoins=bon-ck.bonusDeduct; else upd.coins=bon-ck.bonusDeduct;
     t.update(userRef,upd);
     const histRef=db.collection("wallet_history").doc();
-    t.set(histRef,{uid,matchId:id,matchTitle:m.title||"",type:"join",amount:totalFee,depositDeduct:ck.depositDeduct,bonusDeduct:ck.bonusDeduct,winDeduct:ck.winDeduct,slots:selectedSlots,inGameNames:namesArr,createdAt:now});
+     t.set(histRef,{uid,matchId:id,matchTitle:m.title||"",title:m.title||"",matchNumber:m.matchNumber||"",type:"join",amount:totalFee,depositDeduct:ck.depositDeduct,bonusDeduct:ck.bonusDeduct,winDeduct:ck.winDeduct,slots:selectedSlots,inGameNames:namesArr,createdAt:now});
    }).catch(e=>{if(e.message==="INSUFFICIENT") throw e; throw e;});
   const part={uid,username,inGameNames:namesArr.length?namesArr:Array(selectedSlots.length).fill(username),slots:selectedSlots,kills:0,winning:0,killsList:Array(selectedSlots.length).fill(0),winningList:Array(selectedSlots.length).fill(0),refundedList:Array(selectedSlots.length).fill(false),entryFeePaid:totalFee,createdAt:now,depositDeduct:ded.depositDeduct,bonusDeduct:ded.bonusDeduct,winDeduct:ded.winDeduct};
   await getRtdb().ref(`matches/${id}/participants/${uid}`).set(part);
@@ -382,12 +382,12 @@ router.put("/:id/status",authMiddleware,catLimiter,async(req,res)=>{
          if(Object.keys(upd).length) t.update(uref, upd);
          if(deltaWin>0){
           const wh=db.collection("wallet_history").doc();
-          t.set(wh,{uid,matchId:id,type:"winning",amount:deltaWin,gameName:names[idx]||gameName||"",slot:slotsArr[idx]||slot,kills,playerName:names[idx]||"",createdAt:now,matchTitle:m.title||""});
-         }
-        });
-       }catch(e){console.error("delta winning failed",uid,e.message);}
-      }
-      if(refund && !refundedList[idx] && !isFree){
+           t.set(wh,{uid,matchId:id,type:"winning",amount:deltaWin,gameName:names[idx]||gameName||"",slot:slotsArr[idx]||slot,kills,playerName:names[idx]||"",createdAt:now,matchTitle:m.title||"",title:m.title||"",matchNumber:m.matchNumber||""});
+          }
+         });
+        }catch(e){console.error("delta winning failed",uid,e.message);}
+       }
+       if(refund && !refundedList[idx] && !isFree){
        try{
         const uref=db.collection("users").doc(uid);
         await db.runTransaction(async t=>{
@@ -419,13 +419,13 @@ router.put("/:id/status",authMiddleware,catLimiter,async(req,res)=>{
            if(Object.keys(upd).length===1 && upd.winCoins) {} else upd.winCoins=Number(d.winCoins||0)+winRefund;
          }
          if(Object.keys(upd).length) t.update(uref, upd);
-         const wh=db.collection("wallet_history").doc();
-         t.set(wh,{uid,matchId:id,type:"refund",amount:entryFeePer,depositRefund:depRefund,bonusRefund:bonRefund,winRefund,gameName:names[idx]||"",slot:slotsArr[idx]||slot,createdAt:now,matchTitle:m.title||""});
-        });
-       }catch(e){console.error("refund failed",e.message);}
-       refundedList[idx]=true;
-      }
-      if(!refund){
+          const wh=db.collection("wallet_history").doc();
+          t.set(wh,{uid,matchId:id,type:"refund",amount:entryFeePer,depositRefund:depRefund,bonusRefund:bonRefund,winRefund,gameName:names[idx]||"",slot:slotsArr[idx]||slot,createdAt:now,matchTitle:m.title||"",title:m.title||"",matchNumber:m.matchNumber||""});
+         });
+        }catch(e){console.error("refund failed",e.message);}
+        refundedList[idx]=true;
+       }
+       if(!refund){
         killsList[idx]=kills;
         winningList[idx]=winning;
       }
@@ -462,10 +462,10 @@ router.put("/:id/status",authMiddleware,catLimiter,async(req,res)=>{
          if(Object.keys(upd).length) t.update(uref,upd);
          if(deltaWin2>0){
           const wh=db.collection("wallet_history").doc();
-          t.set(wh,{uid,matchId:id,type:"winning",amount:deltaWin2,gameName:gameName||data.inGameNames?.[0]||"",slot,kills,playerName:gameName||"",createdAt:now,matchTitle:m.title||""});
-         }
-        });
-       }catch(e){console.error("pushId delta failed",e.message);}
+           t.set(wh,{uid,matchId:id,type:"winning",amount:deltaWin2,gameName:gameName||data.inGameNames?.[0]||"",slot,kills,playerName:gameName||"",createdAt:now,matchTitle:m.title||"",title:m.title||"",matchNumber:m.matchNumber||""});
+          }
+         });
+        }catch(e){console.error("pushId delta failed",e.message);}
       }
       if(refund && !data.refunded && !isFree){
        try{
@@ -488,12 +488,12 @@ router.put("/:id/status",authMiddleware,catLimiter,async(req,res)=>{
          if(winRefund>0) upd.winCoins=Number(d.winCoins||0)+winRefund;
          if(bonRefund>0){ if(d.bonusCoins!==undefined) upd.bonusCoins=Number(d.bonusCoins||0)+bonRefund; else upd.coins=Number(d.coins||0)+bonRefund; }
          if(Object.keys(upd).length) t.update(uref,upd);
-         const wh=db.collection("wallet_history").doc();
-         t.set(wh,{uid,matchId:id,type:"refund",amount:entryFeePer,gameName:gameName||"",slot,createdAt:now,matchTitle:m.title||""});
-        });
-       }catch(e){}
-      }
-      const merged={...data, kills, winning, refunded: refund?true:!!data.refunded};
+          const wh=db.collection("wallet_history").doc();
+          t.set(wh,{uid,matchId:id,type:"refund",amount:entryFeePer,gameName:gameName||"",slot,createdAt:now,matchTitle:m.title||"",title:m.title||"",matchNumber:m.matchNumber||""});
+         });
+        }catch(e){}
+       }
+       const merged={...data, kills, winning, refunded: refund?true:!!data.refunded};
      updates[key]=merged;
      parts[key]=merged;
     }
