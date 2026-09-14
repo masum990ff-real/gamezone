@@ -49,6 +49,7 @@ app.use("/api/categories", require("./routes/categories"));
 app.use("/api/matches", require("./routes/matches"));
 app.use("/api/withdrawals", require("./routes/withdrawals"));
 app.use("/api/leaderboard", require("./routes/leaderboard"));
+app.use("/api/staff", require("./routes/staff"));
 
 app.get("/api/health", async (req, res) => {
   try {
