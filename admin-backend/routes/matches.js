@@ -119,6 +119,12 @@ function validatePayload(body, isUpdate) {
     if (!t) e.push("categoryId required");
     else out.categoryId = t;
   }
+  const aboutRaw = body.about !== undefined ? body.about : body.rules;
+  if (aboutRaw !== undefined) {
+    const t = String(aboutRaw || "");
+    if (t.length > 5000) e.push("About max 5000 chars");
+    else out.about = t;
+  }
   if (body.filledSlots !== undefined) {
     const v = validateInt(body.filledSlots, 0, 100);
     if (v === null) e.push("filledSlots must be int 0-100");
@@ -192,6 +198,7 @@ router.post("/", authMiddleware, catLimiter, async (req, res) => {
       version: out.version,
       map: out.map,
       slots: out.slots,
+      about: out.about || "",
       status: out.status || "upcoming",
       createdAt: now,
       filledSlots: 0,
@@ -238,6 +245,7 @@ router.put("/:id", authMiddleware, catLimiter, async (req, res) => {
       update.categoryName = body._categoryName;
     }
     if (out.filledSlots !== undefined) update.filledSlots = out.filledSlots;
+    if (out.about !== undefined) update.about = out.about;
     if (update.entryFeeType === "free") update.entryFee = 0;
     if (prev.entryFeeType === "free" && update.entryFeeType === undefined && update.entryFee !== undefined && update.entryFee !== 0) {
       // allow
