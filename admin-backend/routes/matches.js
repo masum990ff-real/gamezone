@@ -64,10 +64,56 @@ function validatePayload(body, isUpdate) {
     if (v === null) e.push("Time & Date must be valid ISO datetime");
     else out.timeDate = v;
   }
-  if (!isUpdate || body.prizePool !== undefined) {
-    const v = validateInt(body.prizePool, 0, 100000);
-    if (v === null) e.push("PrizePool must be int 0-100000");
-    else out.prizePool = v;
+  let prizeType = null;
+  if (body.prizeType !== undefined) {
+    const t = String(body.prizeType || "").trim().toLowerCase();
+    if (t !== "all" && t !== "survival") e.push("prizeType must be all or survival");
+    else { out.prizeType = t; prizeType = t; }
+  } else if (!isUpdate) {
+    prizeType = "all";
+    out.prizeType = "all";
+  } else {
+    prizeType = null;
+  }
+  if (body.prizeSurvival !== undefined) {
+    const ps = body.prizeSurvival;
+    if (typeof ps !== "object" || ps === null) e.push("prizeSurvival must be object");
+    else {
+      const surv = {};
+      for (let i = 1; i <= 10; i++) {
+        const k = "r" + i;
+        const v = validateInt(ps[k], 0, 100000);
+        if (v === null) e.push("prizeSurvival." + k + " must be int 0-100000");
+        else surv[k] = v;
+      }
+      const tot = validateInt(ps.total, 0, 100000);
+      if (tot === null) e.push("prizeSurvival.total must be int 0-100000");
+      else surv.total = tot;
+      if (e.length === 0) out.prizeSurvival = surv;
+    }
+  }
+  const effectiveType = prizeType || (body.prizeSurvival !== undefined ? "survival" : null);
+  if (!isUpdate) {
+    if (effectiveType === "survival") {
+      if (body.prizeSurvival === undefined) e.push("prizeSurvival required for survival");
+      if (body.prizePool !== undefined) {
+        const v = validateInt(body.prizePool, 0, 100000);
+        if (v === null) e.push("PrizePool must be int 0-100000");
+        else out.prizePool = v;
+      } else if (out.prizeSurvival) out.prizePool = out.prizeSurvival.total;
+    } else {
+      if (!isUpdate || body.prizePool !== undefined) {
+        const v = validateInt(body.prizePool, 0, 100000);
+        if (v === null) e.push("PrizePool must be int 0-100000");
+        else out.prizePool = v;
+      }
+    }
+  } else {
+    if (body.prizePool !== undefined) {
+      const v = validateInt(body.prizePool, 0, 100000);
+      if (v === null) e.push("PrizePool must be int 0-100000");
+      else out.prizePool = v;
+    }
   }
   if (!isUpdate || body.perKill !== undefined) {
     const v = validateInt(body.perKill, 0, 10000);
@@ -190,7 +236,9 @@ router.post("/", authMiddleware, catLimiter, async (req, res) => {
       title: out.title,
       matchNumber: out.matchNumber,
       timeDate: out.timeDate,
+      prizeType: out.prizeType || "all",
       prizePool: out.prizePool,
+      prizeSurvival: out.prizeSurvival || null,
       perKill: out.perKill,
       entryFeeType: out.entryFeeType,
       entryFee: out.entryFee,
@@ -203,6 +251,7 @@ router.post("/", authMiddleware, catLimiter, async (req, res) => {
       createdAt: now,
       filledSlots: 0,
     };
+    if (doc.prizeType !== "survival") doc.prizeSurvival = null;
     await ref.set(doc);
     return ok(res, doc, "Match created");
   } catch (e) {
@@ -231,7 +280,10 @@ router.put("/:id", authMiddleware, catLimiter, async (req, res) => {
     if (out.title !== undefined) update.title = out.title;
     if (out.matchNumber !== undefined) update.matchNumber = out.matchNumber;
     if (out.timeDate !== undefined) update.timeDate = out.timeDate;
+    if (out.prizeType !== undefined) update.prizeType = out.prizeType;
     if (out.prizePool !== undefined) update.prizePool = out.prizePool;
+    if (out.prizeSurvival !== undefined) update.prizeSurvival = out.prizeSurvival;
+    if (out.prizeType === "all") update.prizeSurvival = null;
     if (out.perKill !== undefined) update.perKill = out.perKill;
     if (out.entryFeeType !== undefined) update.entryFeeType = out.entryFeeType;
     if (out.entryFee !== undefined) update.entryFee = out.entryFee;
