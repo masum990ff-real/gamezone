@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>GameZone Admin - Match Management</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="/css/premium.css" />
+<link rel="stylesheet" href="/css/premium.css?v=2" />
 </head>
 <body class="min-h-screen text-slate-800">
 <div class="aurora"><span></span><span></span><span></span></div>
@@ -76,10 +76,11 @@
 <div><label class="block text-xs font-bold mb-1">Team Type</label><select id="fTeamType" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500"><option value="Solo">Solo</option><option value="Duo">Duo</option><option value="Squad">Squad</option></select></div>
 <div><label class="block text-xs font-bold mb-1">Version</label><select id="fVersion" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500"><option value="TPP">TPP</option><option value="FPP">FPP</option></select></div>
 <div><label class="block text-xs font-bold mb-1">Map</label><input id="fMap" type="text" maxlength="30" placeholder="IRON CAGE" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500" /></div>
-<div><label class="block text-xs font-bold mb-1">Slots</label><input id="fSlots" type="number" min="2" max="100" placeholder="2" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500" /></div>
+ <div><label class="block text-xs font-bold mb-1">Slots</label><input id="fSlots" type="number" min="2" max="100" placeholder="2" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500" /></div>
+<div><label class="block text-xs font-bold mb-1">Status</label><select id="fStatus" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500"><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="result">Result</option></select></div>
  </div>
  <div><label class="block text-xs font-bold mb-1">About / Match Rules</label><textarea id="fAbout" rows="5" maxlength="5000" placeholder="Write match rules..." class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500"></textarea></div>
- <button id="createBtn" type="submit" class="btn-grad text-white font-bold rounded-2xl px-6 py-3">Create Match</button>
+ <div class="flex gap-2"><button id="createBtn" type="submit" class="btn-grad text-white font-bold rounded-2xl px-6 py-3">Create Match</button><button id="cancelEditBtn" type="button" class="hidden glass border border-violet-200 rounded-2xl px-6 py-3 text-sm font-bold text-violet-700">Cancel</button></div>
 </form>
 <div class="flex gap-2 mb-4">
 <select id="filterStatus" class="border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70"><option value="">All status</option><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="result">Result</option></select>
@@ -96,7 +97,7 @@
 <div id="toast" class="hidden max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg"></div>
 </main>
 </div>
-<script src="/js/api.js"></script>
+<script src="/js/api.js?v=2"></script>
 <script>
 Api.requireAuth();
 const sidebar=document.getElementById("sidebar");
@@ -108,6 +109,9 @@ function showError(m){document.getElementById("errorText").textContent=m;documen
 function hideError(){document.getElementById("errorCard").classList.add("hidden");}
 function escapeHtml(s){return String(s||"").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function showToast(msg,ok){const t=document.getElementById("toast");t.textContent=msg;t.className="toast-in max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg "+(ok?"bg-emerald-500 text-white":"bg-rose-500 text-white");}
+let editingId=null;
+function isoToLocal(iso){try{const d=new Date(iso);const pad=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());}catch(e){return '';}}
+function resetEdit(){editingId=null;document.getElementById("matchForm").reset();toggleEntryFee();togglePrizeType();const t=document.getElementById("fPrizeTotal");if(t) t.dataset.manual="";document.getElementById("createBtn").textContent="Create Match";document.getElementById("cancelEditBtn").classList.add("hidden");}
 function fmtTime(iso){try{return new Date(iso).toLocaleString();}catch(e){return iso;}}
 function statusPill(s){const l=String(s||"").toLowerCase();if(l==="ongoing") return '<span class="bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full px-3 py-1">ongoing</span>';if(l==="result") return '<span class="bg-slate-200 text-slate-700 text-xs font-bold rounded-full px-3 py-1">result</span>';return '<span class="bg-amber-100 text-amber-700 text-xs font-bold rounded-full px-3 py-1">upcoming</span>';}
 async function loadCategories(){
@@ -161,6 +165,7 @@ async function loadMatches(){
     <td class="px-5 py-3.5 text-xs whitespace-nowrap">${escapeHtml(fmtTime(m.timeDate))}</td>
     <td class="px-5 py-3.5">${statusPill(m.status)}</td>
     <td class="px-5 py-3.5 text-right space-x-1">
+     <button onclick="editMatch('${m.id}')" class="bg-violet-500 hover:bg-violet-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">Edit</button>
      <select onchange="changeStatus('${m.id}',this.value)" class="border border-violet-200 rounded-xl px-2 py-1 text-xs bg-white"><option value="">Change status</option><option value="upcoming">upcoming</option><option value="ongoing">ongoing</option><option value="result">result</option></select>
      <button onclick="delMatch('${m.id}')" class="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">Delete</button>
     </td>
@@ -171,10 +176,41 @@ async function changeStatus(id,status){
  if(!status) return;
  try{await Api.updateMatch(id,{status});showToast("Status updated",true);loadMatches();}catch(e){showToast(e.message,false);}
 }
+async function editMatch(id){
+ try{
+  const data=await Api.getMatch(id);
+  const m=data.match||data;
+  document.getElementById("fCategory").value=m.categoryId||"";
+  document.getElementById("fBannerUrl").value=m.bannerUrl||"";
+  document.getElementById("fTitle").value=m.title||"";
+  document.getElementById("fMatchNumber").value=m.matchNumber||"";
+  document.getElementById("fTimeDate").value=isoToLocal(m.timeDate)||"";
+  const pt=(String(m.prizeType||"").toLowerCase()==="survival")?"survival":"all";
+  document.getElementById("fPrizeType").value=pt;togglePrizeType();
+  if(pt==="all"){document.getElementById("fPrizePool").value=m.prizePool!=null?m.prizePool:"";}
+  else{
+   const ps=m.prizeSurvival||{};for(let i=1;i<=10;i++) document.getElementById("fRank"+i).value=ps["r"+i]!=null?ps["r"+i]:"";
+   const tot=ps.total!=null?ps.total:(m.prizeTotal!=null?m.prizeTotal:m.prizePool);document.getElementById("fPrizeTotal").value=tot!=null?tot:"";document.getElementById("fPrizeTotal").dataset.manual=tot?"1":"";calcTotal();
+  }
+  document.getElementById("fPerKill").value=m.perKill!=null?m.perKill:"";
+  document.getElementById("fEntryFeeType").value=(String(m.entryFeeType||"").toLowerCase()==="free")?"free":"paid";toggleEntryFee();
+  document.getElementById("fEntryFee").value=m.entryFee!=null?m.entryFee:"";
+  if(document.getElementById("fEntryFeeType").value==="free") document.getElementById("fEntryFee").value=0;
+  document.getElementById("fTeamType").value=m.teamType||"Solo";
+  document.getElementById("fVersion").value=m.version||"TPP";
+  document.getElementById("fMap").value=m.map||"";
+  document.getElementById("fSlots").value=m.slots!=null?m.slots:"";
+  document.getElementById("fStatus").value=String(m.status||"upcoming").toLowerCase();
+  document.getElementById("fAbout").value=m.about||m.rules||"";
+  editingId=id;document.getElementById("createBtn").textContent="Update Match";document.getElementById("cancelEditBtn").classList.remove("hidden");
+  document.getElementById("matchForm").scrollIntoView({behavior:"smooth",block:"start"});
+ }catch(e){showToast(e.message,false);}
+}
 async function delMatch(id){
  if(!confirm("Delete this match?")) return;
  try{await Api.deleteMatch(id);showToast("Deleted",true);loadMatches();}catch(e){showToast(e.message,false);}
 }
+document.getElementById("cancelEditBtn").addEventListener("click",resetEdit);
 document.getElementById("matchForm").addEventListener("submit",async(e)=>{
  e.preventDefault();
  const prizeType=document.getElementById("fPrizeType").value;
@@ -192,6 +228,7 @@ document.getElementById("matchForm").addEventListener("submit",async(e)=>{
   version: document.getElementById("fVersion").value,
    map: document.getElementById("fMap").value.trim(),
    slots: Number(document.getElementById("fSlots").value),
+   status: document.getElementById("fStatus").value,
    about: document.getElementById("fAbout").value
   };
  if(prizeType==="all"){
@@ -207,9 +244,13 @@ document.getElementById("matchForm").addEventListener("submit",async(e)=>{
    payload.prizePool=total;
  }
  if(!payload.categoryId){showToast("Select category",false);return;}
- const btn=document.getElementById("createBtn");btn.disabled=true;btn.textContent="Creating...";
- try{await Api.createMatch(payload);showToast("Match created!",true);document.getElementById("matchForm").reset();toggleEntryFee();togglePrizeType();document.getElementById("fPrizeTotal").dataset.manual="";loadMatches();}catch(ex){showToast(ex.message,false);}
- btn.disabled=false;btn.textContent="Create Match";
+ const btn=document.getElementById("createBtn");btn.disabled=true;btn.textContent=editingId?"Updating...":"Creating...";
+ try{
+  if(editingId){await Api.updateMatch(editingId,payload);showToast("Match updated!",true);}
+  else {await Api.createMatch(payload);showToast("Match created!",true);}
+  resetEdit();loadMatches();
+ }catch(ex){showToast(ex.message,false);}
+ btn.disabled=false;btn.textContent=editingId?"Update Match":"Create Match";if(!editingId) btn.textContent="Create Match";
 });
 document.getElementById("refreshBtn").addEventListener("click",loadMatches);
 document.getElementById("retryBtn").addEventListener("click",loadMatches);
