@@ -1,5 +1,5 @@
 const express = require("express");
-const { getDb, friendlyFirestoreError } = require("../config/firebase");
+const { getDb, getApp, friendlyFirestoreError } = require("../config/firebase");
 const { ok, fail, authMiddleware } = require("../middleware/auth");
 const { registerLimiter } = require("../middleware/rateLimit");
 
@@ -14,15 +14,32 @@ router.post("/register-token", registerLimiter, async (req, res) => {
     if (deviceInfo && (typeof deviceInfo !== "string" || deviceInfo.length > 200)) {
       return fail(res, 400, "Device info too long");
     }
+    let uid = "";
+    const authHeader = req.headers.authorization || "";
+    if (authHeader.startsWith("Bearer ")) {
+      try {
+        const idToken = authHeader.slice(7).trim();
+        if (idToken) {
+          const decoded = await getApp().auth().verifyIdToken(idToken);
+          uid = decoded.uid || "";
+        }
+      } catch (e) {}
+    }
+    if (!uid && req.body && typeof req.body.uid === "string") {
+      uid = String(req.body.uid).trim().slice(0, 128);
+    }
     const db = getDb();
     const docId = token.replace(/\//g, "_");
     const ref = db.collection("tokens").doc(docId);
     const snap = await ref.get();
     const now = new Date().toISOString();
+    const base = { lastActive: now, deviceInfo: deviceInfo || "" };
+    if (uid) base.uid = uid;
     if (snap.exists) {
-      await ref.set({ lastActive: now, deviceInfo: deviceInfo || "" }, { merge: true });
+      await ref.set(base, { merge: true });
+      if (!snap.data().token) await ref.set({ token }, { merge: true });
     } else {
-      await ref.set({ token, deviceInfo: deviceInfo || "", createdAt: now, lastActive: now });
+      await ref.set({ token, deviceInfo: deviceInfo || "", createdAt: now, lastActive: now, ...(uid ? { uid } : {}) });
     }
     return ok(res, {}, "Token registered");
   } catch (e) {
