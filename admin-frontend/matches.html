@@ -95,6 +95,7 @@
 </div>
 </div>
 <div id="toast" class="hidden max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg"></div>
+<div id="ongoingModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl"><h3 class="font-bold text-lg mb-4">Set Match Ongoing</h3><label class="block text-xs font-bold mb-1">Room ID *</label><input id="mRoomId" class="w-full border border-violet-200 rounded-xl px-3 py-2 text-sm mb-3" placeholder="Enter Room ID"/><label class="block text-xs font-bold mb-1">Room Password *</label><input id="mRoomPass" class="w-full border border-violet-200 rounded-xl px-3 py-2 text-sm mb-3" placeholder="Enter Password"/><label class="flex items-center gap-2 text-sm mb-4"><input type="checkbox" id="mSend" checked/> Send notification to joined users</label><div class="flex gap-2 justify-end"><button onclick="closeOngoingModal()" class="glass border rounded-xl px-4 py-2 text-sm font-bold">Cancel</button><button onclick="submitOngoing()" class="btn-grad text-white rounded-xl px-5 py-2 text-sm font-bold">Submit</button></div></div></div>
 </main>
 </div>
 <script src="/js/api.js?v=2"></script>
@@ -173,10 +174,37 @@ async function loadMatches(){
    </tr>`).join("")||`<tr><td colspan="6" class="px-5 py-8 text-center text-sm text-slate-400">No matches yet</td></tr>`;
  }catch(e){document.getElementById("rows").innerHTML="";showError(e.message);}
 }
-async function viewMatch(id){ try{ const d=await Api.getParticipants(id); const list=d.participants||[]; let html=list.length?list.map(p=>`<div class='text-xs p-2 border-b'>${escapeHtml(p.username||p.uid)} - ${escapeHtml((p.inGameNames||[]).join(','))} slots:${escapeHtml((p.slots||[]).join(','))} kills:${p.kills||0} win:${p.winning||0}</div>`).join(''):'<div class="text-sm text-slate-400 p-4">No participants</div>'; const w=window.open('','_blank','width=500,height=600'); w.document.write('<html><body>'+html+'</body></html>'); }catch(e){showToast(e.message,false);} }
+let ongoingMatchId=null;
+function closeOngoingModal(){document.getElementById('ongoingModal').classList.add('hidden');}
+async function submitOngoing(){
+ const roomId=document.getElementById('mRoomId').value.trim();
+ const pass=document.getElementById('mRoomPass').value.trim();
+ const send=document.getElementById('mSend').checked;
+ if(!roomId){showToast('Room ID required',false);return;}
+ if(!pass){showToast('Room Password required',false);return;}
+ try{await Api.updateMatchStatus(ongoingMatchId,'ongoing',{roomId,roomPassword:pass,sendNotification:send}); showToast('Status -> ongoing, notified '+ (send?'joined users':'none'),true); closeOngoingModal(); loadMatches();}catch(e){showToast(e.message,false);}
+}
+async function viewMatch(id){
+ try{
+  const d=await Api.getParticipants(id); const list=d.participants||[];
+  let html='';
+  if(!list.length) html='<div class="text-sm text-slate-400 p-4">No participants</div>';
+  else {
+   for(const p of list){
+    const names=p.inGameNames||[];
+    const slots=p.slots||[];
+    const uname=escapeHtml(p.username||p.uid||'Unknown');
+    const n=Math.max(names.length, slots.length);
+    if(n===0) html+=`<div class='text-xs p-2 border-b'>${uname} <span class='text-slate-400'>(no names)</span> kills:${p.kills||0} win:${p.winning||0}</div>`;
+    else for(let i=0;i<n;i++){ const gn=escapeHtml(names[i]||''); const sl=escapeHtml(String(slots[i]||'')); html+=`<div class='text-xs p-2 border-b flex justify-between'><span>${uname} &middot; ${gn}${sl?' <span class=text-slate-400>slot:'+sl+'</span>':''}</span><span class='text-slate-500'>kills:${p.kills||0} win:${p.winning||0}</span></div>`; }
+   }
+  }
+  const w=window.open('','_blank','width=600,height=650'); w.document.write('<html><head><title>Participants</title><style>body{font-family:system-ui;padding:12px}</style></head><body><h3>Participants ('+list.length+' users)</h3>'+html+'</body></html>'); w.document.close();
+ }catch(e){showToast(e.message,false);}
+}
 async function openStatusModal(id,cur){
  const ns=cur==='upcoming'?'ongoing':cur==='ongoing'?'result':'upcoming';
- if(ns==='ongoing'){ const roomId=prompt('Room ID:'); if(roomId===null) return; const pass=prompt('Room Password:'); if(pass===null) return; const send=confirm('Send notification to joined users?'); try{await Api.updateMatchStatus(id,'ongoing',{roomId,roomPassword:pass,sendNotification:send}); showToast('Status -> ongoing',true); loadMatches();}catch(e){showToast(e.message,false);} }
+ if(ns==='ongoing'){ ongoingMatchId=id; document.getElementById('mRoomId').value=''; document.getElementById('mRoomPass').value=''; document.getElementById('mSend').checked=true; document.getElementById('ongoingModal').classList.remove('hidden'); return; }
  else if(ns==='result'){ let notice=prompt('Notice (optional):')||''; try{ const d=await Api.getParticipants(id); const parts=d.participants||[]; if(!parts.length){showToast('No participants',false);return;} const results=[]; for(const p of parts){ const killsStr=prompt(`Kills for ${p.username||p.uid}:`,'0'); if(killsStr===null) return; const winStr=prompt(`Winning for ${p.username||p.uid}:`,'0'); if(winStr===null) return; results.push({uid:p.uid,playerName:(p.inGameNames||[p.username])[0],kills:Number(killsStr)||0,winning:Number(winStr)||0}); } await Api.updateMatchStatus(id,'result',{results,notice}); showToast('Result saved',true); loadMatches(); }catch(e){showToast(e.message,false);} }
  else {showToast('Already result',false);}
 }
