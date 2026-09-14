@@ -86,6 +86,12 @@
 <select id="filterStatus" class="border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70"><option value="">All status</option><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="result">Result</option></select>
 <select id="filterCategory" class="border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70"><option value="">All categories</option></select>
 </div>
+<div class="flex gap-2 mb-4" id="adminTabs">
+  <button data-tab="" class="tab-btn active bg-violet-600 text-white px-4 py-2 rounded-full text-xs font-bold">All</button>
+  <button data-tab="upcoming" class="tab-btn bg-white border border-violet-200 text-violet-700 px-4 py-2 rounded-full text-xs font-bold">Upcoming</button>
+  <button data-tab="ongoing" class="tab-btn bg-white border border-violet-200 text-violet-700 px-4 py-2 rounded-full text-xs font-bold">Ongoing</button>
+  <button data-tab="result" class="tab-btn bg-white border border-violet-200 text-violet-700 px-4 py-2 rounded-full text-xs font-bold">Result</button>
+</div>
 <div class="glass shadow-xl rounded-3xl overflow-hidden anim-in d1">
 <div class="overflow-x-auto">
 <table class="w-full text-sm min-w-[820px]">
@@ -95,8 +101,9 @@
 </div>
 </div>
 <div id="toast" class="hidden max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg"></div>
+<div id="viewModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-3xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto"><div class="flex justify-between items-center mb-3"><h3 class="font-bold text-lg">Participants</h3><button onclick="closeViewModal()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold">×</button></div><div id="viewInfo" class="text-xs text-slate-500 mb-3"></div><div id="viewList" class="space-y-2 max-h-[60vh] overflow-y-auto"></div><div class="flex justify-end mt-4"><button onclick="closeViewModal()" class="glass border rounded-xl px-4 py-2 text-sm font-bold">Close</button></div></div></div>
 <div id="ongoingModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-3xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto"><h3 class="font-bold text-lg mb-2">Set Match Ongoing</h3><div id="ongoingInfo" class="text-xs bg-violet-50 rounded-xl p-3 mb-3">Loading participants...</div><label class="block text-xs font-bold mb-1">Room ID *</label><input id="mRoomId" class="w-full border border-violet-200 rounded-xl px-3 py-2 text-sm mb-3" placeholder="Enter Room ID"/><label class="block text-xs font-bold mb-1">Room Password *</label><input id="mRoomPass" class="w-full border border-violet-200 rounded-xl px-3 py-2 text-sm mb-3" placeholder="Enter Password"/><label class="flex items-center gap-2 text-sm mb-4"><input type="checkbox" id="mSend" checked/> Send notification to joined users</label><div class="flex gap-2 justify-end"><button onclick="closeOngoingModal()" class="glass border rounded-xl px-4 py-2 text-sm font-bold">Cancel</button><button onclick="submitOngoing()" class="btn-grad text-white rounded-xl px-5 py-2 text-sm font-bold">Submit</button></div></div></div>
-<div id="resultModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-3xl p-6 w-full max-w-3xl shadow-xl max-h-[90vh] overflow-y-auto"><h3 class="font-bold text-lg mb-2">Set Result — per gameName entries</h3><div id="resultEntries" class="space-y-2 mb-3 max-h-[50vh] overflow-y-auto border rounded-xl p-2 bg-slate-50"></div><label class="block text-xs font-bold mb-1">Notice (optional)</label><textarea id="mNotice" class="w-full border border-violet-200 rounded-xl px-3 py-2 text-sm mb-3" rows="2" placeholder="Notice for all participants"></textarea><div class="flex gap-2 justify-end"><button onclick="closeResultModal()" class="glass border rounded-xl px-4 py-2 text-sm font-bold">Cancel</button><button onclick="submitResult()" class="btn-grad text-white rounded-xl px-5 py-2 text-sm font-bold">Save Result</button></div></div></div>
+<div id="resultModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-3xl p-6 w-full max-w-3xl shadow-xl max-h-[90vh] overflow-y-auto"><h3 class="font-bold text-lg mb-2">Set Result — per gameName entries</h3><p class="text-xs text-slate-500 mb-2">Refund disables Kills/Winning for that entry.</p><div id="resultEntries" class="space-y-2 mb-3 max-h-[50vh] overflow-y-auto border rounded-xl p-2 bg-slate-50"></div><label class="block text-xs font-bold mb-1">Notice (optional)</label><textarea id="mNotice" class="w-full border border-violet-200 rounded-xl px-3 py-2 text-sm mb-3" rows="2" placeholder="Notice for all participants"></textarea><div class="flex gap-2 justify-end"><button onclick="closeResultModal()" class="glass border rounded-xl px-4 py-2 text-sm font-bold">Cancel</button><button onclick="submitResult()" class="btn-grad text-white rounded-xl px-5 py-2 text-sm font-bold">Save Result</button></div></div></div>
 </main>
 </div>
 <script src="/js/api.js?v=2"></script>
@@ -185,39 +192,34 @@ async function submitOngoing(){
  if(!pass){showToast('Room Password required',false);return;}
  try{await Api.updateMatchStatus(ongoingMatchId,'ongoing',{roomId,roomPassword:pass,sendNotification:send}); showToast('Status -> ongoing, notified '+ (send?'joined users':'none'),true); closeOngoingModal(); loadMatches();}catch(e){showToast(e.message,false);}
 }
+function closeViewModal(){document.getElementById('viewModal').classList.add('hidden');}
 async function viewMatch(id){
- try{
-  const d=await Api.getParticipants(id); const list=d.participants||[];
-  let html='';
-  if(!list.length) html='<div class="text-sm text-slate-400 p-4">No participants</div>';
-  else {
-   html+='<table class="w-full text-xs border-collapse"><thead><tr class="bg-slate-800 text-white"><th class="px-2 py-1 text-left">#</th><th class="px-2 py-1 text-left">Username</th><th class="px-2 py-1 text-left">Game Name</th><th class="px-2 py-1 text-center">Slot</th><th class="px-2 py-1 text-center">Kills</th><th class="px-2 py-1 text-center">Winning</th></tr></thead><tbody>';
-   let idx=1;
-   let totalEntries=0;
-   for(const p of list){
-    const names=p.inGameNames||[];
-    const slots=p.slots||[];
-    const killsList=p.killsList||[];
-    const winningList=p.winningList||[];
-    const uname=escapeHtml(p.username||p.uid||'Unknown');
-    const uidEsc=escapeHtml(p.uid||'');
-    const n=Math.max(names.length, slots.length, 1);
-    totalEntries+=n;
-    for(let i=0;i<n;i++){
-     const gn=escapeHtml(names[i]|| (names.length? '' : uname));
-     const sl=escapeHtml(String(slots[i]|| (i+1)));
-     const kl=escapeHtml(String(killsList[i]!=null?killsList[i]:(p.kills||0)));
-     const wl=escapeHtml(String(winningList[i]!=null?winningList[i]:(p.winning||0)));
-     html+=`<tr class="border-b ${idx%2===0?'bg-slate-50':''}"><td class="px-2 py-1">${idx}</td><td class="px-2 py-1">${uname}<div class="text-[10px] text-slate-400">${uidEsc}</div></td><td class="px-2 py-1 font-medium">${gn||'-'}</td><td class="px-2 py-1 text-center">${sl}</td><td class="px-2 py-1 text-center">${kl}</td><td class="px-2 py-1 text-center">₹${wl}</td></tr>`;
-     idx++;
-    }
+  try{
+   const d=await Api.getParticipants(id); const list=d.participants||[];
+   const info=document.getElementById('viewInfo');
+   const container=document.getElementById('viewList');
+   container.innerHTML='';
+   if(!list.length){
+     info.textContent='No participants yet';
+   } else {
+     let totalEntries=0; for(const p of list) totalEntries+=Math.max((p.inGameNames||[]).length,(p.slots||[]).length,1);
+     info.textContent=`Users: ${list.length} | Entries: ${totalEntries}`;
+     let idx=1;
+     for(const p of list){
+       const names=p.inGameNames||[]; const slots=p.slots||[]; const killsList=p.killsList||[]; const winningList=p.winningList||[];
+       const n=Math.max(names.length, slots.length, 1);
+       for(let i=0;i<n;i++){
+         const gn=names[i]||''; const sl=String(slots[i]|| (i+1)); const kl=String(killsList[i]!=null?killsList[i]:(p.kills||0)); const wl=String(winningList[i]!=null?winningList[i]:(p.winning||0));
+         const card=document.createElement('div');
+         card.className='flex items-center gap-3 bg-gradient-to-br from-white to-violet-50 border border-violet-100 rounded-2xl px-4 py-3 shadow-sm';
+         card.innerHTML=`<div class="w-7 h-7 rounded-full bg-violet-600 text-white flex items-center justify-center text-xs font-bold shrink-0">${idx}</div><div class="flex-1 min-w-0"><div class="text-xs font-bold text-slate-800 truncate">${escapeHtml(p.username||p.uid)}</div><div class="text-[11px] text-violet-600 font-medium truncate">${escapeHtml(gn||'-')} <span class="text-slate-400">• Slot ${escapeHtml(sl)}</span></div><div class="text-[10px] text-slate-400 truncate">${escapeHtml(p.uid||'')}</div></div><div class="text-center"><div class="text-[10px] text-slate-500">Kills</div><div class="text-sm font-bold text-slate-800">${escapeHtml(kl)}</div></div><div class="text-center ml-2"><div class="text-[10px] text-slate-500">Winning</div><div class="text-sm font-bold text-emerald-600">₹${escapeHtml(wl)}</div></div>`;
+         container.appendChild(card); idx++;
+       }
+     }
    }
-   html+='</tbody></table>';
-   html=`<div class="text-xs text-slate-500 mb-2">Users: ${list.length} | Entries: ${totalEntries}</div>`+html;
-  }
-  const w=window.open('','_blank','width=750,height=700'); w.document.write('<html><head><title>Participants</title><style>body{font-family:system-ui;padding:12px} table{border:1px solid #e2e8f0}</style></head><body><h3>Participants View</h3>'+html+'</body></html>'); w.document.close();
- }catch(e){showToast(e.message,false);}
-}
+   document.getElementById('viewModal').classList.remove('hidden');
+  }catch(e){showToast(e.message,false);}
+ }
 let resultMatchId=null;
 function closeResultModal(){document.getElementById('resultModal').classList.add('hidden');}
 async function submitResult(){
@@ -275,9 +277,12 @@ async function openStatusModal(id,cur){
      const w=winningList[i]!=null?winningList[i]:(p.winning||0);
      const ref=!!refundedList[i];
      const row=document.createElement('div'); row.className='flex flex-wrap gap-2 items-end bg-white rounded-xl p-2 border';
-     row.setAttribute('data-uid', p.uid); row.setAttribute('data-slot', String(sl)); row.setAttribute('data-gn', gn);
-     row.innerHTML=`<div class="w-6 text-xs font-bold text-slate-500">#${idx}</div><div class="flex-1 min-w-[120px]"><div class="text-xs font-bold">${escapeHtml(p.username||p.uid)}</div><div class="text-xs text-violet-700 font-medium">${escapeHtml(gn||'-')}</div><div class="text-[10px] text-slate-400">Slot: ${escapeHtml(String(sl))} | UID: ${escapeHtml(p.uid.slice(0,8))}</div></div><div><label class="block text-[10px] font-bold">Kills</label><input type="number" min="0" max="999" value="${k}" class="inpKills w-16 border border-violet-200 rounded-lg px-2 py-1 text-sm"/></div><div><label class="block text-[10px] font-bold">Winning ₹</label><input type="number" min="0" max="100000" value="${w}" class="inpWin w-20 border border-violet-200 rounded-lg px-2 py-1 text-sm"/></div><div><label class="flex items-center gap-1 text-xs"><input type="checkbox" class="inpRefund" ${ref?'checked disabled':''}/> Refund${ref?' (done)':''}</label></div>`;
-     container.appendChild(row); idx++;
+      row.setAttribute('data-uid', p.uid); row.setAttribute('data-slot', String(sl)); row.setAttribute('data-gn', gn);
+      const disAttr = ref?'disabled':'';
+      const opClass = ref?'opacity-50 pointer-events-none':'';
+      row.innerHTML=`<div class="w-6 text-xs font-bold text-slate-500">#${idx}</div><div class="flex-1 min-w-[120px]"><div class="text-xs font-bold">${escapeHtml(p.username||p.uid)}</div><div class="text-xs text-violet-700 font-medium">${escapeHtml(gn||'-')}</div><div class="text-[10px] text-slate-400">Slot: ${escapeHtml(String(sl))} | UID: ${escapeHtml(p.uid.slice(0,8))}</div></div><div class="${opClass}"><label class="block text-[10px] font-bold">Kills</label><input type="number" min="0" max="999" value="${k}" class="inpKills w-16 border border-violet-200 rounded-lg px-2 py-1 text-sm" ${disAttr}/></div><div class="${opClass}"><label class="block text-[10px] font-bold">Winning ₹</label><input type="number" min="0" max="100000" value="${w}" class="inpWin w-20 border border-violet-200 rounded-lg px-2 py-1 text-sm" ${disAttr}/></div><div><label class="flex items-center gap-1 text-xs"><input type="checkbox" class="inpRefund" ${ref?'checked disabled':''}/> Refund${ref?' (done)':''}</label></div>`;
+      const cb=row.querySelector('.inpRefund'); if(cb){ cb.addEventListener('change',()=>{ const dis=cb.checked; row.querySelector('.inpKills').disabled=dis; row.querySelector('.inpWin').disabled=dis; row.querySelector('.inpKills').parentElement.classList.toggle('opacity-50',dis); row.querySelector('.inpWin').parentElement.classList.toggle('opacity-50',dis); row.querySelector('.inpKills').parentElement.classList.toggle('pointer-events-none',dis); row.querySelector('.inpWin').parentElement.classList.toggle('pointer-events-none',dis); }); if(ref){ row.querySelector('.inpKills').disabled=true; row.querySelector('.inpWin').disabled=true; } }
+      container.appendChild(row); idx++;
     }
    }
    document.getElementById('mNotice').value='';
@@ -369,9 +374,22 @@ document.getElementById("matchForm").addEventListener("submit",async(e)=>{
 });
 document.getElementById("refreshBtn").addEventListener("click",loadMatches);
 document.getElementById("retryBtn").addEventListener("click",loadMatches);
-document.getElementById("filterCategory").addEventListener("change",loadMatches);
-document.getElementById("filterStatus").addEventListener("change",loadMatches);
-loadCategories().then(loadMatches);
+ document.getElementById("filterCategory").addEventListener("change",loadMatches);
+ document.getElementById("filterStatus").addEventListener("change",()=>{
+   const v=document.getElementById("filterStatus").value;
+   document.querySelectorAll('#adminTabs .tab-btn').forEach(b=>{ const t=b.getAttribute('data-tab'); const on=t===v; b.className=on?'tab-btn active bg-violet-600 text-white px-4 py-2 rounded-full text-xs font-bold':'tab-btn bg-white border border-violet-200 text-violet-700 px-4 py-2 rounded-full text-xs font-bold'; });
+   loadMatches();
+ });
+ document.querySelectorAll('#adminTabs .tab-btn').forEach(b=>{
+   b.addEventListener('click',()=>{
+     const t=b.getAttribute('data-tab')||'';
+     document.getElementById('filterStatus').value=t;
+     document.querySelectorAll('#adminTabs .tab-btn').forEach(x=> x.className='tab-btn bg-white border border-violet-200 text-violet-700 px-4 py-2 rounded-full text-xs font-bold');
+     b.className='tab-btn active bg-violet-600 text-white px-4 py-2 rounded-full text-xs font-bold';
+     loadMatches();
+   });
+ });
+ loadCategories().then(loadMatches);
 </script>
 </body>
 </html>
