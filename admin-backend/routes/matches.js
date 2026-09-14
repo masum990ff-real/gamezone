@@ -273,12 +273,15 @@ router.put("/:id/status",authMiddleware,catLimiter,async(req,res)=>{
   if(!snap.exists()) return fail(res,404,"Match not found");
   const m=snap.val();
   const cur=String(m.status||"upcoming").toLowerCase();
-  if(newStatus==="ongoing"){
-   if(cur!=="upcoming") return fail(res,400,"Only upcoming -> ongoing allowed");
-   const roomId=String(body.roomId||"").trim();
-   const roomPassword=String(body.roomPassword||"").trim();
-   if(!roomId||!roomPassword) return fail(res,400,"roomId and roomPassword required");
-   await getRtdb().ref(`matches/${id}`).update({status:"ongoing",roomId,roomPassword});
+   if(newStatus==="ongoing"){
+    if(cur!=="upcoming") return fail(res,400,"Only upcoming -> ongoing allowed");
+    const roomId=String(body.roomId||"").trim();
+    const roomPassword=String(body.roomPassword||"").trim();
+    if(!roomId||!roomPassword) return fail(res,400,"roomId and roomPassword required");
+    const noticeRaw=body.notice!==undefined?String(body.notice).slice(0,1000):undefined;
+    const updO={status:"ongoing",roomId,roomPassword};
+    if(noticeRaw!==undefined){const t=noticeRaw.trim(); if(t) updO.notice=t; else if(m.notice) updO.notice=m.notice;}
+    await getRtdb().ref(`matches/${id}`).update(updO);
     if(body.sendNotification!==false){
      try{
       const parts=m.participants||{};
@@ -313,8 +316,10 @@ router.put("/:id/status",authMiddleware,catLimiter,async(req,res)=>{
    return ok(res,{id,...fresh.val()},"Status -> ongoing");
   } else {
    if(cur!=="ongoing" && cur!=="result") return fail(res,400,"Only ongoing -> result allowed");
-   const results=Array.isArray(body.results)?body.results:[];
-   const notice=String(body.notice||"").slice(0,1000);
+    const results=Array.isArray(body.results)?body.results:[];
+    let notice;
+    if(body.notice!==undefined){const t=String(body.notice).slice(0,1000).trim(); notice=t||String(m.notice||"").slice(0,1000);}
+    else notice=String(m.notice||"").slice(0,1000);
    if(!results.length && !Array.isArray(body.refunds)) return fail(res,400,"results required");
    if(!results.length && Array.isArray(body.refunds) && !body.refunds.length) return fail(res,400,"results required");
    let parts=m.participants||{};
