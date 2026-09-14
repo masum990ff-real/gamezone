@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GameZone Admin - Match Management</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/css/premium.css" />
+</head>
+<body class="min-h-screen text-slate-800">
+<div class="aurora"><span></span><span></span><span></span></div>
+<div class="flex min-h-screen">
+<button id="menuBtn" class="md:hidden fixed top-4 left-4 z-20 btn-grad text-white rounded-2xl px-3.5 py-2 font-bold">☰</button>
+<aside id="sidebar" class="hidden md:flex flex-col w-64 shrink-0 fixed md:static inset-y-0 left-0 z-10 p-6 text-white" style="background: linear-gradient(180deg, #0f0b2d, #2e1065 70%, #4c1d95);">
+<div class="flex items-center gap-2.5 mb-10">
+<div class="w-10 h-10 rounded-2xl bg-white text-lg font-extrabold flex items-center justify-center shadow-lg"><span class="grad-text">G</span></div>
+<div><h2 class="text-lg font-extrabold leading-none">GameZone</h2><p class="text-[11px] text-violet-300 mt-1">Admin Panel</p></div>
+</div>
+<nav class="space-y-2 text-sm font-semibold">
+<a href="/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10"/></svg>
+ Dashboard</a>
+<a href="/send-notification.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+ Send Notification</a>
+<a href="/history.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+ History</a>
+<a href="/users.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+ Users</a>
+<a href="/categories.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+ Category Management</a>
+<a href="/matches.html" class="nav-active flex items-center gap-3 px-4 py-3 rounded-2xl text-white">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2M12 12v6M8 12v6M16 12v6"/></svg>
+ Match Management</a>
+<a href="/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8l2.8-2.8M17 7l2.8-2.8"/></svg>
+ Settings</a>
+<a href="/payment-api.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+ Payment API</a>
+<a href="/deposits.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 7H9.5a3 3 0 000 6h5a3 3 0 010 6H6"/></svg>
+ Deposits</a>
+<a href="/withdraw.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
+ Withdraw</a>
+</nav>
+<button onclick="Api.logout()" class="text-left px-4 py-3 rounded-2xl text-rose-300 hover:bg-white/10 font-semibold text-sm mt-auto transition">Logout</button>
+</aside>
+<div id="overlay" class="hidden fixed inset-0 bg-black/40 z-[5] md:hidden"></div>
+<main class="flex-1 p-6 md:p-10 pt-16 md:pt-10 w-full max-w-5xl mx-auto">
+<div class="flex items-center justify-between mb-6 anim-in">
+<div>
+<h1 class="text-2xl md:text-3xl font-extrabold">Match <span class="grad-text">Management</span></h1>
+<p id="countInfo" class="text-sm text-slate-500 mt-1">Create and manage matches by category</p>
+</div>
+<button id="refreshBtn" class="glass card-lift shadow-lg rounded-2xl px-4 py-2.5 text-sm font-bold text-violet-700">Refresh</button>
+</div>
+<div id="errorCard" class="hidden glass border-l-4 !border-l-rose-500 text-rose-700 rounded-2xl px-4 py-3 text-sm mb-4 shadow"><span id="errorText"></span><button id="retryBtn" class="ml-2 font-bold underline">Retry</button></div>
+<form id="matchForm" class="anim-in d1 glass shadow-xl rounded-3xl p-6 space-y-4 mb-6">
+<div class="grid sm:grid-cols-2 gap-3">
+<div><label class="block text-xs font-bold mb-1">Category</label><select id="fCategory" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500"></select></div>
+<div><label class="block text-xs font-bold mb-1">Banner URL</label><input id="fBannerUrl" type="url" maxlength="500" placeholder="https://..." class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500" /></div>
+<div><label class="block text-xs font-bold mb-1">Match Title</label><input id="fTitle" type="text" maxlength="80" placeholder="ONLY 10 LW HEAD 1V1 TOURNAMENT #RAJU" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500" /></div>
+<div><label class="block text-xs font-bold mb-1">Match Number</label><input id="fMatchNumber" type="text" maxlength="20" placeholder="RAJU01" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500" /></div>
+<div><label class="block text-xs font-bold mb-1">Time & Date</label><input id="fTimeDate" type="datetime-local" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500" /></div>
+<div><label class="block text-xs font-bold mb-1">Prize Pool</label><input id="fPrizePool" type="number" min="0" max="100000" placeholder="15" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500" /></div>
+<div><label class="block text-xs font-bold mb-1">Per Kill</label><input id="fPerKill" type="number" min="0" max="10000" placeholder="0" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500" /></div>
+<div><label class="block text-xs font-bold mb-1">Entry Fee Type</label><select id="fEntryFeeType" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500"><option value="paid">Paid</option><option value="free">Free</option></select></div>
+<div><label class="block text-xs font-bold mb-1">Entry Fee</label><input id="fEntryFee" type="number" min="0" max="10000" placeholder="10" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500" /></div>
+<div><label class="block text-xs font-bold mb-1">Team Type</label><select id="fTeamType" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500"><option value="Solo">Solo</option><option value="Duo">Duo</option><option value="Squad">Squad</option></select></div>
+<div><label class="block text-xs font-bold mb-1">Version</label><select id="fVersion" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500"><option value="TPP">TPP</option><option value="FPP">FPP</option></select></div>
+<div><label class="block text-xs font-bold mb-1">Map</label><input id="fMap" type="text" maxlength="30" placeholder="IRON CAGE" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500" /></div>
+<div><label class="block text-xs font-bold mb-1">Slots</label><input id="fSlots" type="number" min="2" max="100" placeholder="2" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500" /></div>
+</div>
+<button id="createBtn" type="submit" class="btn-grad text-white font-bold rounded-2xl px-6 py-3">Create Match</button>
+</form>
+<div class="flex gap-2 mb-4">
+<select id="filterStatus" class="border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70"><option value="">All status</option><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="result">Result</option></select>
+<select id="filterCategory" class="border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70"><option value="">All categories</option></select>
+</div>
+<div class="glass shadow-xl rounded-3xl overflow-hidden anim-in d1">
+<div class="overflow-x-auto">
+<table class="w-full text-sm min-w-[820px]">
+<thead><tr class="text-left text-xs uppercase tracking-wide text-violet-500 border-b border-violet-100 bg-violet-50/50"><th class="px-5 py-3.5">Banner</th><th class="px-5 py-3.5">Title</th><th class="px-5 py-3.5">Category</th><th class="px-5 py-3.5">Time</th><th class="px-5 py-3.5">Status</th><th class="px-5 py-3.5 text-right">Action</th></tr></thead>
+<tbody id="rows" class="divide-y divide-violet-50"></tbody>
+</table>
+</div>
+</div>
+<div id="toast" class="hidden max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg"></div>
+</main>
+</div>
+<script src="/js/api.js"></script>
+<script>
+Api.requireAuth();
+const sidebar=document.getElementById("sidebar");
+const overlay=document.getElementById("overlay");
+function toggleMenu(f){const s=f!==undefined?f:sidebar.classList.contains("hidden");sidebar.classList.toggle("hidden",!s);overlay.classList.toggle("hidden",!s);}
+document.getElementById("menuBtn").addEventListener("click",()=>toggleMenu());
+overlay.addEventListener("click",()=>toggleMenu(false));
+function showError(m){document.getElementById("errorText").textContent=m;document.getElementById("errorCard").classList.remove("hidden");}
+function hideError(){document.getElementById("errorCard").classList.add("hidden");}
+function escapeHtml(s){return String(s||"").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function showToast(msg,ok){const t=document.getElementById("toast");t.textContent=msg;t.className="toast-in max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg "+(ok?"bg-emerald-500 text-white":"bg-rose-500 text-white");}
+function fmtTime(iso){try{return new Date(iso).toLocaleString();}catch(e){return iso;}}
+function statusPill(s){const l=String(s||"").toLowerCase();if(l==="ongoing") return '<span class="bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full px-3 py-1">ongoing</span>';if(l==="result") return '<span class="bg-slate-200 text-slate-700 text-xs font-bold rounded-full px-3 py-1">result</span>';return '<span class="bg-amber-100 text-amber-700 text-xs font-bold rounded-full px-3 py-1">upcoming</span>';}
+async function loadCategories(){
+ try{
+  const data=await Api.getCategories();
+  const cats=data.categories||[];
+  const sel=document.getElementById("fCategory");
+  const fcat=document.getElementById("filterCategory");
+  sel.innerHTML=cats.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("")||'<option value="">No categories</option>';
+  fcat.innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+ }catch(e){showError(e.message);}
+}
+function toggleEntryFee(){
+ const t=document.getElementById("fEntryFeeType").value;
+ const inp=document.getElementById("fEntryFee");
+ if(t==="free"){inp.value=0;inp.disabled=true;inp.classList.add("opacity-50");}
+ else {inp.disabled=false;inp.classList.remove("opacity-50"); if(inp.value==="0") inp.value="";}
+}
+document.getElementById("fEntryFeeType").addEventListener("change",toggleEntryFee);
+toggleEntryFee();
+async function loadMatches(){
+ hideError();
+ document.getElementById("rows").innerHTML=[1,2,3].map(()=>`<tr><td colspan="6" class="px-5 py-4"><div class="shimmer h-5">&nbsp;</div></td></tr>`).join("");
+ try{
+  const cat=document.getElementById("filterCategory").value;
+  const st=document.getElementById("filterStatus").value;
+  const data=await Api.getMatches(cat||undefined, st||undefined);
+  const list=data.matches||[];
+  document.getElementById("countInfo").textContent=list.length+" matches";
+  document.getElementById("rows").innerHTML=list.map(m=>`
+   <tr class="hover:bg-violet-50/60 transition">
+    <td class="px-5 py-3.5"><img src="${escapeHtml(m.bannerUrl)}" alt="" class="w-14 h-10 rounded-xl object-cover border border-violet-100" onerror="this.style.display='none'" /></td>
+    <td class="px-5 py-3.5 font-bold text-xs max-w-[220px] truncate">${escapeHtml(m.title)}<div class="text-[11px] text-slate-400 font-normal">#${escapeHtml(m.matchNumber)}</div></td>
+    <td class="px-5 py-3.5 text-xs">${escapeHtml(m.categoryName||m.categoryId)}</td>
+    <td class="px-5 py-3.5 text-xs whitespace-nowrap">${escapeHtml(fmtTime(m.timeDate))}</td>
+    <td class="px-5 py-3.5">${statusPill(m.status)}</td>
+    <td class="px-5 py-3.5 text-right space-x-1">
+     <select onchange="changeStatus('${m.id}',this.value)" class="border border-violet-200 rounded-xl px-2 py-1 text-xs bg-white"><option value="">Change status</option><option value="upcoming">upcoming</option><option value="ongoing">ongoing</option><option value="result">result</option></select>
+     <button onclick="delMatch('${m.id}')" class="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">Delete</button>
+    </td>
+   </tr>`).join("")||`<tr><td colspan="6" class="px-5 py-8 text-center text-sm text-slate-400">No matches yet</td></tr>`;
+ }catch(e){document.getElementById("rows").innerHTML="";showError(e.message);}
+}
+async function changeStatus(id,status){
+ if(!status) return;
+ try{await Api.updateMatch(id,{status});showToast("Status updated",true);loadMatches();}catch(e){showToast(e.message,false);}
+}
+async function delMatch(id){
+ if(!confirm("Delete this match?")) return;
+ try{await Api.deleteMatch(id);showToast("Deleted",true);loadMatches();}catch(e){showToast(e.message,false);}
+}
+document.getElementById("matchForm").addEventListener("submit",async(e)=>{
+ e.preventDefault();
+ const payload={
+  categoryId: document.getElementById("fCategory").value.trim(),
+  bannerUrl: document.getElementById("fBannerUrl").value.trim(),
+  title: document.getElementById("fTitle").value.trim(),
+  matchNumber: document.getElementById("fMatchNumber").value.trim(),
+  timeDate: document.getElementById("fTimeDate").value ? new Date(document.getElementById("fTimeDate").value).toISOString() : "",
+  prizePool: Number(document.getElementById("fPrizePool").value),
+  perKill: Number(document.getElementById("fPerKill").value),
+  entryFeeType: document.getElementById("fEntryFeeType").value,
+  entryFee: Number(document.getElementById("fEntryFee").value),
+  teamType: document.getElementById("fTeamType").value,
+  version: document.getElementById("fVersion").value,
+  map: document.getElementById("fMap").value.trim(),
+  slots: Number(document.getElementById("fSlots").value)
+ };
+ if(!payload.categoryId){showToast("Select category",false);return;}
+ const btn=document.getElementById("createBtn");btn.disabled=true;btn.textContent="Creating...";
+ try{await Api.createMatch(payload);showToast("Match created!",true);document.getElementById("matchForm").reset();toggleEntryFee();loadMatches();}catch(ex){showToast(ex.message,false);}
+ btn.disabled=false;btn.textContent="Create Match";
+});
+document.getElementById("refreshBtn").addEventListener("click",loadMatches);
+document.getElementById("retryBtn").addEventListener("click",loadMatches);
+document.getElementById("filterCategory").addEventListener("change",loadMatches);
+document.getElementById("filterStatus").addEventListener("change",loadMatches);
+loadCategories().then(loadMatches);
+</script>
+</body>
+</html>
