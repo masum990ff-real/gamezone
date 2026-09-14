@@ -1,4 +1,3 @@
-
 const express = require("express");
 const { getRtdb, getDb, getMessaging } = require("../config/firebase");
 const { ok, fail, authMiddleware, firebaseAuthMiddleware } = require("../middleware/auth");
@@ -97,7 +96,21 @@ router.get("/:id/participants",catLimiter,async(req,res)=>{
   const id=String(req.params.id||"").trim();
   const snap=await getRtdb().ref("matches/"+id+"/participants").get();
   const val=snap.exists()?snap.val():{};
-  const list=Object.values(val);
+  let list=Object.values(val);
+  try{
+   const db=getDb();
+   const uids=[...new Set(list.map(p=>String(p.uid||"").trim()).filter(Boolean))].slice(0,100);
+   if(uids.length){
+    const snaps=await Promise.all(uids.map(uid=>db.collection("users").doc(uid).get().catch(()=>null)));
+    const map={};
+    for(const s of snaps){ if(s && s.exists){ const d=s.data()||{}; map[s.id]=String(d.username||d.name||"").trim(); }}
+    list=list.map(p=>{
+     const fresh=map[String(p.uid||"")];
+     if(fresh) return {...p, username:fresh};
+     return p;
+    });
+   }
+  }catch(e){ console.error("participants enrich failed",e.message); }
   return ok(res,{participants:list},"");
  }catch(e){return fail(res,500,"Failed");}
 });
@@ -259,23 +272,36 @@ router.put("/:id/status",authMiddleware,catLimiter,async(req,res)=>{
    const roomPassword=String(body.roomPassword||"").trim();
    if(!roomId||!roomPassword) return fail(res,400,"roomId and roomPassword required");
    await getRtdb().ref(`matches/${id}`).update({status:"ongoing",roomId,roomPassword});
-   if(body.sendNotification!==false){
-    try{
-     const parts=m.participants||{};
-     const uids=Object.keys(parts).length?Object.keys(parts):[];
-     if(uids.length){
-      const db=getDb();
-      const chunk=uids.slice(0,200);
-      const tokenSnaps=await Promise.all(chunk.map(uid=>db.collection("tokens").where("uid","==",uid).limit(1).get().catch(()=>null)));
-      const tokens=[];
-      for(const s of tokenSnaps){if(s&&!s.empty) for(const d of s.docs){const t=d.data().token||d.data().fcmToken; if(t) tokens.push(t);}}
-      if(tokens.length){
-       const msg={notification:{title:`Match ${m.title||id} is now ongoing`,body:`Room ID: ${roomId}`},tokens,android:{priority:"high"}};
-       try{await getMessaging().sendEachForMulticast(msg);}catch(e){console.error("FCM ongoing failed",e.message);}
+    if(body.sendNotification!==false){
+     try{
+      const parts=m.participants||{};
+      const rawUids=Object.keys(parts);
+      const uids=[];
+      for(const k of rawUids){
+       const p=parts[k];
+       const uid=String((p&&p.uid)||k).trim();
+       if(uid && !uids.includes(uid)) uids.push(uid);
       }
-     }
-    }catch(e){console.error("notify ongoing err",e.message);}
-   }
+      if(uids.length){
+       const db=getDb();
+       const chunk=uids.slice(0,200);
+       const tokenSnaps=await Promise.all(chunk.map(uid=>db.collection("tokens").where("uid","==",uid).get().catch(()=>null)));
+       const tokens=[];
+       for(const s of tokenSnaps){if(s&&!s.empty) for(const d of s.docs){const t=d.data().token||d.data().fcmToken; if(t) tokens.push(t);}}
+       if(tokens.length){
+        const uniq=[...new Set(tokens)].slice(0,500);
+        const msg={notification:{title:`Match ${m.title||id} is now ongoing`,body:`Room ID: ${roomId} | Password: ${roomPassword}`},tokens:uniq,android:{priority:"high"},data:{matchId:id,roomId,roomPassword}};
+        try{await getMessaging().sendEachForMulticast(msg);}catch(e){console.error("FCM ongoing failed",e.message);}
+        try{
+         const histRef=db.collection("notifications_history").doc();
+         await histRef.set({title:`Match ${m.title||id} ongoing`,body:`Room ID: ${roomId}`,imageUrl:"",sentAt:new Date().toISOString(),successCount:uniq.length,failureCount:0,sentBy:(req.admin&&req.admin.email)||"system",messageId:"match-ongoing-"+id,matchId:id});
+        }catch(e){console.error("ongoing history save failed",e.message);}
+       } else {
+        console.error("FCM ongoing no tokens for uids", uids.length);
+       }
+      }
+     }catch(e){console.error("notify ongoing err",e.message);}
+    }
    const fresh=await getRtdb().ref(`matches/${id}`).get();
    return ok(res,{id,...fresh.val()},"Status -> ongoing");
   } else {
