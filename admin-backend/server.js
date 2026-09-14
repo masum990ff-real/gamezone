@@ -46,6 +46,7 @@ app.use("/api/payment-config", require("./routes/payment-config"));
 app.use("/api/payments", require("./routes/payments"));
 app.use("/api/deposits", require("./routes/deposits"));
 app.use("/api/categories", require("./routes/categories"));
+app.use("/api/matches", require("./routes/matches"));
 
 app.get("/api/health", async (req, res) => {
   try {
