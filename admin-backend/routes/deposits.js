@@ -8,23 +8,30 @@ router.get("/", authMiddleware, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
-    const snap = await getRtdb().ref("payments/byUid").get();
+    const onlyUid = String(req.query.uid || "").trim().slice(0, 64);
+    const rtdb = getRtdb();
     const all = [];
-    if (snap.exists()) {
-      snap.forEach((userSnap) => {
-        userSnap.forEach((orderSnap) => {
-          const v = orderSnap.val() || {};
-          all.push({
-            orderId: orderSnap.key,
-            uid: userSnap.key,
-            amount: v.amount || 0,
-            status: v.status || "pending",
-            txnId: v.txn_id || "",
-            utr: v.utr || "",
-            createdAt: v.createdAt || "",
-          });
+    // Fast path: ?uid= reads only that user's node instead of the whole tree.
+    const collect = (userSnap) => {
+      userSnap.forEach((orderSnap) => {
+        const v = orderSnap.val() || {};
+        all.push({
+          orderId: orderSnap.key,
+          uid: userSnap.key,
+          amount: v.amount || 0,
+          status: v.status || "pending",
+          txnId: v.txn_id || "",
+          utr: v.utr || "",
+          createdAt: v.createdAt || "",
         });
       });
+    };
+    if (onlyUid) {
+      const one = await rtdb.ref("payments/byUid/" + onlyUid).get();
+      if (one.exists()) collect(one);
+    } else {
+      const snap = await rtdb.ref("payments/byUid").get();
+      if (snap.exists()) snap.forEach(collect);
     }
     all.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
     const total = all.length;
