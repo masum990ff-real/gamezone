@@ -55,13 +55,13 @@ const Api = (() => {
         method: "POST",
         body: JSON.stringify({ title, body, imageUrl: imageUrl || "" }),
       }),
-    getHistory: (page, limit) =>
-      request(`/api/notifications/history?page=${page || 1}&limit=${limit || 20}`),
+    getHistory: (page, limit, cursor) =>
+      request(`/api/notifications/history?page=${page || 1}&limit=${limit || 20}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`),
     getStats: () => request("/api/notifications/stats"),
-    getUsers: (page, limit, q) =>
-      request(`/api/users?page=${page || 1}&limit=${limit || 20}${q ? `&q=${encodeURIComponent(q)}` : ""}`),
-    getDeposits: (page, limit) =>
-      request(`/api/deposits?page=${page || 1}&limit=${limit || 20}`),
+    getUsers: (page, limit, q, cursor) =>
+      request(`/api/users?page=${page || 1}&limit=${limit || 20}${q ? `&q=${encodeURIComponent(q)}` : ""}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`),
+    getDeposits: (page, limit, uid) =>
+      request(`/api/deposits?page=${page || 1}&limit=${limit || 20}${uid ? `&uid=${encodeURIComponent(uid)}` : ""}`),
     banUser: (uid, reason) =>
       request(`/api/users/${uid}/ban`, { method: "POST", body: JSON.stringify({ reason: reason || "" }) }),
     unbanUser: (uid) => request(`/api/users/${uid}/unban`, { method: "POST", body: "{}" }),
