@@ -361,25 +361,25 @@ router.put("/:id/status",authMiddleware,catLimiter,async(req,res)=>{
      while(refundedList.length < names.length) refundedList.push(false);
      winningList=winningList.map(v=>Number(v)||0);
      killsList=killsList.map(v=>Number(v)||0);
-      const oldWinning=Number(winningList[idx]||0);
-      const oldKills=Number(killsList[idx]||0);
-      let deltaWin=winning - oldWinning;
-      let deltaKills=kills - oldKills;
-      if(refund){ deltaWin=0; deltaKills=0; winning=oldWinning; kills=oldKills; }
-      if((deltaWin!==0 || deltaKills!==0) && !refund){
-       try{
-        const uref=db.collection("users").doc(uid);
-        await db.runTransaction(async t=>{
-         const s=await t.get(uref);
-         if(!s.exists) return;
-         const d=s.data()||{};
-         const curWin=Number(d.winCoins||0);
-         const curLife=Number(d.lifetimeWin||0);
-         const curKills=Number(d.kills||0);
-         const upd={};
-         if(deltaWin!==0){ upd.winCoins=curWin+deltaWin; if(deltaWin>0) upd.lifetimeWin=curLife+deltaWin; }
-         if(deltaKills!==0) upd.kills=curKills+deltaKills;
-         if(Object.keys(upd).length) t.update(uref, upd);
+       const oldWinning=Number(winningList[idx]||0);
+       const oldKills=Number(killsList[idx]||0);
+       let deltaWin=winning - oldWinning;
+       let deltaKills=kills - oldKills;
+       if(refund){ deltaWin=0; deltaKills=0; winning=oldWinning; kills=oldKills; }
+       if((deltaWin!==0 || deltaKills!==0) && !refund){
+        try{
+         const uref=db.collection("users").doc(uid);
+         await db.runTransaction(async t=>{
+          const s=await t.get(uref);
+          if(!s.exists) return;
+          const d=s.data()||{};
+          const curWin=Number(d.winCoins||0);
+          const curLife=Number(d.lifetimeWin||0);
+          const curKills=Number(d.kills||0);
+          const upd={};
+          if(deltaWin!==0){ upd.winCoins=Math.max(0,curWin+deltaWin); upd.lifetimeWin=Math.max(0,curLife+deltaWin); }
+          if(deltaKills!==0) upd.kills=Math.max(0,curKills+deltaKills);
+          if(Object.keys(upd).length) t.update(uref, upd);
          if(deltaWin>0){
           const wh=db.collection("wallet_history").doc();
            t.set(wh,{uid,matchId:id,type:"winning",amount:deltaWin,gameName:names[idx]||gameName||"",slot:slotsArr[idx]||slot,kills,playerName:names[idx]||"",createdAt:now,matchTitle:m.title||"",title:m.title||"",matchNumber:m.matchNumber||""});
@@ -446,20 +446,20 @@ router.put("/:id/status",authMiddleware,catLimiter,async(req,res)=>{
       const {key, data}=matched;
       const oldWinning=Number(data.winning||0);
       const oldKills=Number(data.kills||0);
-      let deltaWin2=winning - oldWinning;
-      let deltaKills2=kills - oldKills;
-      if(refund){ deltaWin2=0; deltaKills2=0; winning=oldWinning; kills=oldKills; }
-      if((deltaWin2!==0 || deltaKills2!==0) && !refund){
-       try{
-        const uref=db.collection("users").doc(uid);
-        await db.runTransaction(async t=>{
-         const s=await t.get(uref);
-         if(!s.exists) return;
-         const d=s.data()||{};
-         const upd={};
-         if(deltaWin2!==0){ upd.winCoins=Number(d.winCoins||0)+deltaWin2; if(deltaWin2>0) upd.lifetimeWin=Number(d.lifetimeWin||0)+deltaWin2; }
-         if(deltaKills2!==0) upd.kills=Number(d.kills||0)+deltaKills2;
-         if(Object.keys(upd).length) t.update(uref,upd);
+       let deltaWin2=winning - oldWinning;
+       let deltaKills2=kills - oldKills;
+       if(refund){ deltaWin2=0; deltaKills2=0; winning=oldWinning; kills=oldKills; }
+       if((deltaWin2!==0 || deltaKills2!==0) && !refund){
+        try{
+         const uref=db.collection("users").doc(uid);
+         await db.runTransaction(async t=>{
+          const s=await t.get(uref);
+          if(!s.exists) return;
+          const d=s.data()||{};
+          const upd={};
+          if(deltaWin2!==0){ upd.winCoins=Math.max(0,Number(d.winCoins||0)+deltaWin2); upd.lifetimeWin=Math.max(0,Number(d.lifetimeWin||0)+deltaWin2); }
+          if(deltaKills2!==0) upd.kills=Math.max(0,Number(d.kills||0)+deltaKills2);
+          if(Object.keys(upd).length) t.update(uref,upd);
          if(deltaWin2>0){
           const wh=db.collection("wallet_history").doc();
            t.set(wh,{uid,matchId:id,type:"winning",amount:deltaWin2,gameName:gameName||data.inGameNames?.[0]||"",slot,kills,playerName:gameName||"",createdAt:now,matchTitle:m.title||"",title:m.title||"",matchNumber:m.matchNumber||""});
