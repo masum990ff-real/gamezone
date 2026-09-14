@@ -70,28 +70,43 @@ router.get("/history", authMiddleware, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const cursor = String(req.query.cursor || "");
     const db = getDb();
     const col = db.collection("notifications_history");
     const totalSnap = await col.count().get();
     const total = totalSnap.data().count;
-    const snap = await col.orderBy("sentAt", "desc").limit(limit).offset((page - 1) * limit).get();
+    // Cursor pagination (?cursor=<lastSeen sentAt>) avoids offset skip-reads.
+    const ordered = col.orderBy("sentAt", "desc");
+    const snap = cursor
+      ? await ordered.startAfter(cursor).limit(limit).get()
+      : await ordered.limit(limit).offset((page - 1) * limit).get();
     const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    return ok(res, { items, page, limit, total, totalPages: Math.ceil(total / limit) }, "");
+    const last = snap.docs[snap.docs.length - 1];
+    return ok(res, {
+      items, page, limit, total, totalPages: Math.ceil(total / limit),
+      nextCursor: snap.docs.length === limit && last ? String(last.data().sentAt || "") : "",
+    }, "");
   } catch (e) {
     console.error("History load failed:", e.message);
     return fail(res, 500, "Failed to load history: " + friendlyFirestoreError(e));
   }
 });
 
+// Stats counters cached 60s in memory — avoids 3 count() reads on every call.
+let statsCache = { at: 0, data: null };
 router.get("/stats", authMiddleware, async (req, res) => {
   try {
+    if (statsCache.data && Date.now() - statsCache.at < 60 * 1000) {
+      return ok(res, statsCache.data, "");
+    }
     const db = getDb();
     const [t, n, u] = await Promise.all([
       db.collection("tokens").count().get(),
       db.collection("notifications_history").count().get(),
       db.collection("users").count().get(),
     ]);
-    return ok(res, { devices: t.data().count, notifications: n.data().count, users: u.data().count }, "");
+    statsCache = { at: Date.now(), data: { devices: t.data().count, notifications: n.data().count, users: u.data().count } };
+    return ok(res, statsCache.data, "");
   } catch (e) {
     console.error("Stats load failed:", e.message);
     return fail(res, 500, "Failed to load stats: " + friendlyFirestoreError(e));
