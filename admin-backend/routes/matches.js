@@ -250,10 +250,10 @@ router.post("/:id/join",firebaseAuthMiddleware,catLimiter,async(req,res)=>{
    if(!ck.sufficient) throw new Error("INSUFFICIENT");
    const upd={depositCoins:dep-ck.depositDeduct,winCoins:w-ck.winDeduct,matchesPlayed:(Number(d.matchesPlayed||0)+1)};
    if(d.bonusCoins!==undefined) upd.bonusCoins=bon-ck.bonusDeduct; else upd.coins=bon-ck.bonusDeduct;
-   t.update(userRef,upd);
-   const histRef=db.collection("wallet_history").doc();
-   t.set(histRef,{uid,matchId:id,type:"join",amount:totalFee,depositDeduct:ck.depositDeduct,bonusDeduct:ck.bonusDeduct,winDeduct:ck.winDeduct,slots:selectedSlots,inGameNames:namesArr,createdAt:now});
-  }).catch(e=>{if(e.message==="INSUFFICIENT") throw e; throw e;});
+    t.update(userRef,upd);
+    const histRef=db.collection("wallet_history").doc();
+    t.set(histRef,{uid,matchId:id,matchTitle:m.title||"",type:"join",amount:totalFee,depositDeduct:ck.depositDeduct,bonusDeduct:ck.bonusDeduct,winDeduct:ck.winDeduct,slots:selectedSlots,inGameNames:namesArr,createdAt:now});
+   }).catch(e=>{if(e.message==="INSUFFICIENT") throw e; throw e;});
   const part={uid,username,inGameNames:namesArr.length?namesArr:Array(selectedSlots.length).fill(username),slots:selectedSlots,kills:0,winning:0,killsList:Array(selectedSlots.length).fill(0),winningList:Array(selectedSlots.length).fill(0),refundedList:Array(selectedSlots.length).fill(false),entryFeePaid:totalFee,createdAt:now,depositDeduct:ded.depositDeduct,bonusDeduct:ded.bonusDeduct,winDeduct:ded.winDeduct};
   await getRtdb().ref(`matches/${id}/participants/${uid}`).set(part);
   await getRtdb().ref(`matches/${id}`).update({filledSlots:filled+slotCount});
@@ -361,99 +361,139 @@ router.put("/:id/status",authMiddleware,catLimiter,async(req,res)=>{
      while(refundedList.length < names.length) refundedList.push(false);
      winningList=winningList.map(v=>Number(v)||0);
      killsList=killsList.map(v=>Number(v)||0);
-     const oldWinning=Number(winningList[idx]||0);
-     const oldKills=Number(killsList[idx]||0);
-     const deltaWin=winning - oldWinning;
-     const deltaKills=kills - oldKills;
-     if(deltaWin!==0 || deltaKills!==0){
-      try{
-       const uref=db.collection("users").doc(uid);
-       await db.runTransaction(async t=>{
-        const s=await t.get(uref);
-        if(!s.exists) return;
-        const d=s.data()||{};
-        const curWin=Number(d.winCoins||0);
-        const curLife=Number(d.lifetimeWin||0);
-        const curKills=Number(d.kills||0);
-        const upd={};
-        if(deltaWin!==0){ upd.winCoins=curWin+deltaWin; if(deltaWin>0) upd.lifetimeWin=curLife+deltaWin; }
-        if(deltaKills!==0) upd.kills=curKills+deltaKills;
-        if(Object.keys(upd).length) t.update(uref, upd);
-        if(deltaWin>0){
+      const oldWinning=Number(winningList[idx]||0);
+      const oldKills=Number(killsList[idx]||0);
+      let deltaWin=winning - oldWinning;
+      let deltaKills=kills - oldKills;
+      if(refund){ deltaWin=0; deltaKills=0; winning=oldWinning; kills=oldKills; }
+      if((deltaWin!==0 || deltaKills!==0) && !refund){
+       try{
+        const uref=db.collection("users").doc(uid);
+        await db.runTransaction(async t=>{
+         const s=await t.get(uref);
+         if(!s.exists) return;
+         const d=s.data()||{};
+         const curWin=Number(d.winCoins||0);
+         const curLife=Number(d.lifetimeWin||0);
+         const curKills=Number(d.kills||0);
+         const upd={};
+         if(deltaWin!==0){ upd.winCoins=curWin+deltaWin; if(deltaWin>0) upd.lifetimeWin=curLife+deltaWin; }
+         if(deltaKills!==0) upd.kills=curKills+deltaKills;
+         if(Object.keys(upd).length) t.update(uref, upd);
+         if(deltaWin>0){
+          const wh=db.collection("wallet_history").doc();
+          t.set(wh,{uid,matchId:id,type:"winning",amount:deltaWin,gameName:names[idx]||gameName||"",slot:slotsArr[idx]||slot,kills,playerName:names[idx]||"",createdAt:now,matchTitle:m.title||""});
+         }
+        });
+       }catch(e){console.error("delta winning failed",uid,e.message);}
+      }
+      if(refund && !refundedList[idx] && !isFree){
+       try{
+        const uref=db.collection("users").doc(uid);
+        await db.runTransaction(async t=>{
+         const s=await t.get(uref);
+         if(!s.exists) return;
+         const d=s.data()||{};
+         const depDeduct=Number(data.depositDeduct||0);
+         const bonDeduct=Number(data.bonusDeduct||0);
+         const winDeduct=Number(data.winDeduct||0);
+         const totalDeduct=depDeduct+bonDeduct+winDeduct;
+         const nEntries=Array.isArray(data.slots)?data.slots.length:1;
+         let depRefund=0, bonRefund=0, winRefund=0;
+         if(totalDeduct>0 && nEntries>0){
+           depRefund=Math.round(depDeduct/nEntries);
+           bonRefund=Math.round(bonDeduct/nEntries);
+           winRefund=entryFeePer - depRefund - bonRefund;
+           if(winRefund<0) winRefund=0;
+           if(bonRefund+depRefund+winRefund!==entryFeePer) winRefund=entryFeePer - depRefund - bonRefund;
+         } else {
+           winRefund=entryFeePer;
+         }
+         const upd={};
+         if(depRefund>0) upd.depositCoins=Number(d.depositCoins||0)+depRefund;
+         if(winRefund>0) upd.winCoins=Number(d.winCoins||0)+winRefund;
+         if(bonDeduct>0 && bonRefund>0){
+           if(d.bonusCoins!==undefined) upd.bonusCoins=Number(d.bonusCoins||0)+bonRefund;
+           else upd.coins=Number(d.coins||0)+bonRefund;
+         } else if(winRefund>0 && depRefund===0 && bonRefund===0){
+           if(Object.keys(upd).length===1 && upd.winCoins) {} else upd.winCoins=Number(d.winCoins||0)+winRefund;
+         }
+         if(Object.keys(upd).length) t.update(uref, upd);
          const wh=db.collection("wallet_history").doc();
-         t.set(wh,{uid,matchId:id,type:"winning",amount:deltaWin,gameName:names[idx]||gameName||"",slot:slotsArr[idx]||slot,kills,playerName:names[idx]||"",createdAt:now});
-        }
-       });
-      }catch(e){console.error("delta winning failed",uid,e.message);}
-     }
-     if(refund && !refundedList[idx] && !isFree){
-      try{
-       const uref=db.collection("users").doc(uid);
-       await db.runTransaction(async t=>{
-        const s=await t.get(uref);
-        if(!s.exists) return;
-        const d=s.data()||{};
-        t.update(uref,{winCoins: Number(d.winCoins||0)+entryFeePer, depositCoins: Number(d.depositCoins||0)});
-        const wh=db.collection("wallet_history").doc();
-        t.set(wh,{uid,matchId:id,type:"refund",amount:entryFeePer,gameName:names[idx]||"",slot:slotsArr[idx]||slot,createdAt:now});
-       });
-      }catch(e){console.error("refund failed",e.message);}
-      refundedList[idx]=true;
-     }
-     if(refund && refundedList[idx] && !r.refund && false){}
-     killsList[idx]=kills;
-     winningList[idx]=winning;
+         t.set(wh,{uid,matchId:id,type:"refund",amount:entryFeePer,depositRefund:depRefund,bonusRefund:bonRefund,winRefund,gameName:names[idx]||"",slot:slotsArr[idx]||slot,createdAt:now,matchTitle:m.title||""});
+        });
+       }catch(e){console.error("refund failed",e.message);}
+       refundedList[idx]=true;
+      }
+      if(!refund){
+        killsList[idx]=kills;
+        winningList[idx]=winning;
+      }
      const totalKills=killsList.reduce((a,b)=>a+Number(b||0),0);
      const totalWinning=winningList.reduce((a,b)=>a+Number(b||0),0);
      const merged={...data, kills:totalKills, winning:totalWinning, killsList, winningList, refundedList};
      if(updates[key]){ Object.assign(updates[key], merged); } else { updates[key]=merged; }
      parts[key]=merged;
     } else {
-     let matched=null;
-     for(const c of cands){
-      const cnames=Array.isArray(c.data.inGameNames)? c.data.inGameNames : (c.data.gameName? [String(c.data.gameName)] : []);
-      const cslots=Array.isArray(c.data.slots)? c.data.slots : (c.data.slot!=null? [Number(c.data.slot)] : []);
-      if(slot!=null && cslots.includes(Number(slot))) {matched=c; break;}
-      if(gameName && cnames.some(n=> String(n).trim().toLowerCase()===String(gameName).trim().toLowerCase())) {matched=c; break;}
-     }
-     if(!matched) matched=cands[0];
-     const {key, data}=matched;
-     const oldWinning=Number(data.winning||0);
-     const oldKills=Number(data.kills||0);
-     const deltaWin=winning - oldWinning;
-     const deltaKills=kills - oldKills;
-     if(deltaWin!==0 || deltaKills!==0){
-      try{
-       const uref=db.collection("users").doc(uid);
-       await db.runTransaction(async t=>{
-        const s=await t.get(uref);
-        if(!s.exists) return;
-        const d=s.data()||{};
-        const upd={};
-        if(deltaWin!==0){ upd.winCoins=Number(d.winCoins||0)+deltaWin; if(deltaWin>0) upd.lifetimeWin=Number(d.lifetimeWin||0)+deltaWin; }
-        if(deltaKills!==0) upd.kills=Number(d.kills||0)+deltaKills;
-        if(Object.keys(upd).length) t.update(uref,upd);
-        if(deltaWin>0){
+      let matched=null;
+      for(const c of cands){
+       const cnames=Array.isArray(c.data.inGameNames)? c.data.inGameNames : (c.data.gameName? [String(c.data.gameName)] : []);
+       const cslots=Array.isArray(c.data.slots)? c.data.slots : (c.data.slot!=null? [Number(c.data.slot)] : []);
+       if(slot!=null && cslots.includes(Number(slot))) {matched=c; break;}
+       if(gameName && cnames.some(n=> String(n).trim().toLowerCase()===String(gameName).trim().toLowerCase())) {matched=c; break;}
+      }
+      if(!matched) matched=cands[0];
+      const {key, data}=matched;
+      const oldWinning=Number(data.winning||0);
+      const oldKills=Number(data.kills||0);
+      let deltaWin2=winning - oldWinning;
+      let deltaKills2=kills - oldKills;
+      if(refund){ deltaWin2=0; deltaKills2=0; winning=oldWinning; kills=oldKills; }
+      if((deltaWin2!==0 || deltaKills2!==0) && !refund){
+       try{
+        const uref=db.collection("users").doc(uid);
+        await db.runTransaction(async t=>{
+         const s=await t.get(uref);
+         if(!s.exists) return;
+         const d=s.data()||{};
+         const upd={};
+         if(deltaWin2!==0){ upd.winCoins=Number(d.winCoins||0)+deltaWin2; if(deltaWin2>0) upd.lifetimeWin=Number(d.lifetimeWin||0)+deltaWin2; }
+         if(deltaKills2!==0) upd.kills=Number(d.kills||0)+deltaKills2;
+         if(Object.keys(upd).length) t.update(uref,upd);
+         if(deltaWin2>0){
+          const wh=db.collection("wallet_history").doc();
+          t.set(wh,{uid,matchId:id,type:"winning",amount:deltaWin2,gameName:gameName||data.inGameNames?.[0]||"",slot,kills,playerName:gameName||"",createdAt:now,matchTitle:m.title||""});
+         }
+        });
+       }catch(e){console.error("pushId delta failed",e.message);}
+      }
+      if(refund && !data.refunded && !isFree){
+       try{
+        const uref=db.collection("users").doc(uid);
+        await db.runTransaction(async t=>{
+         const s=await t.get(uref);
+         if(!s.exists) return;
+         const d=s.data()||{};
+         const depDeduct=Number(data.depositDeduct||0);
+         const bonDeduct=Number(data.bonusDeduct||0);
+         const winDeduct=Number(data.winDeduct||0);
+         const totalDeduct=depDeduct+bonDeduct+winDeduct;
+         let depRefund=0, bonRefund=0, winRefund=entryFeePer;
+         if(totalDeduct>0){
+           const nEntries=Array.isArray(data.slots)?data.slots.length:1;
+           if(nEntries>1){ depRefund=Math.round(depDeduct/nEntries); bonRefund=Math.round(bonDeduct/nEntries); winRefund=entryFeePer-depRefund-bonRefund; if(winRefund<0) winRefund=0; } else { depRefund=depDeduct; bonRefund=bonDeduct; winRefund=winDeduct; if(depRefund+bonRefund+winRefund!==entryFeePer) winRefund=entryFeePer-depRefund-bonRefund; }
+         }
+         const upd={};
+         if(depRefund>0) upd.depositCoins=Number(d.depositCoins||0)+depRefund;
+         if(winRefund>0) upd.winCoins=Number(d.winCoins||0)+winRefund;
+         if(bonRefund>0){ if(d.bonusCoins!==undefined) upd.bonusCoins=Number(d.bonusCoins||0)+bonRefund; else upd.coins=Number(d.coins||0)+bonRefund; }
+         if(Object.keys(upd).length) t.update(uref,upd);
          const wh=db.collection("wallet_history").doc();
-         t.set(wh,{uid,matchId:id,type:"winning",amount:deltaWin,gameName:gameName||data.inGameNames?.[0]||"",slot,kills,playerName:gameName||"",createdAt:now});
-        }
-       });
-      }catch(e){console.error("pushId delta failed",e.message);}
-     }
-     if(refund && !data.refunded && !isFree){
-      try{
-       const uref=db.collection("users").doc(uid);
-       await db.runTransaction(async t=>{
-        const s=await t.get(uref);
-        if(!s.exists) return;
-        const d=s.data()||{};
-        t.update(uref,{winCoins:Number(d.winCoins||0)+entryFeePer});
-        const wh=db.collection("wallet_history").doc();
-        t.set(wh,{uid,matchId:id,type:"refund",amount:entryFeePer,gameName:gameName||"",slot,createdAt:now});
-       });
-      }catch(e){}
-     }
-     const merged={...data, kills, winning, refunded: refund?true:!!data.refunded};
+         t.set(wh,{uid,matchId:id,type:"refund",amount:entryFeePer,gameName:gameName||"",slot,createdAt:now,matchTitle:m.title||""});
+        });
+       }catch(e){}
+      }
+      const merged={...data, kills, winning, refunded: refund?true:!!data.refunded};
      updates[key]=merged;
      parts[key]=merged;
     }
