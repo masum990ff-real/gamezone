@@ -47,6 +47,8 @@ app.use("/api/payments", require("./routes/payments"));
 app.use("/api/deposits", require("./routes/deposits"));
 app.use("/api/categories", require("./routes/categories"));
 app.use("/api/matches", require("./routes/matches"));
+app.use("/api/withdrawals", require("./routes/withdrawals"));
+app.use("/api/leaderboard", require("./routes/leaderboard"));
 
 app.get("/api/health", async (req, res) => {
   try {
@@ -66,5 +68,5 @@ app.use(express.static(path.join(__dirname, "../admin-frontend")));
 app.use((err, req, res, next) => fail(res, 500, "Internal server error"));
 
 app.listen(PORT, () => {
-  console.log("GameZone backend v1.5.7 starting on :" + PORT);
+  console.log("GameZone backend v1.6.0 starting on :" + PORT);
 });
