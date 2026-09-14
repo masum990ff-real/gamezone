@@ -164,13 +164,21 @@ async function loadMatches(){
     <td class="px-5 py-3.5 text-xs">${escapeHtml(m.categoryName||m.categoryId)}</td>
     <td class="px-5 py-3.5 text-xs whitespace-nowrap">${escapeHtml(fmtTime(m.timeDate))}</td>
     <td class="px-5 py-3.5">${statusPill(m.status)}</td>
-    <td class="px-5 py-3.5 text-right space-x-1">
-     <button onclick="editMatch('${m.id}')" class="bg-violet-500 hover:bg-violet-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">Edit</button>
-     <select onchange="changeStatus('${m.id}',this.value)" class="border border-violet-200 rounded-xl px-2 py-1 text-xs bg-white"><option value="">Change status</option><option value="upcoming">upcoming</option><option value="ongoing">ongoing</option><option value="result">result</option></select>
-     <button onclick="delMatch('${m.id}')" class="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">Delete</button>
-    </td>
+     <td class="px-5 py-3.5 text-right space-x-1">
+      <button onclick="viewMatch('${m.id}')" class="bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">View</button>
+      <button onclick="editMatch('${m.id}')" class="bg-violet-500 hover:bg-violet-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">Edit</button>
+      <button onclick="openStatusModal('${m.id}','${m.status||'upcoming'}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">Status</button>
+      <button onclick="delMatch('${m.id}')" class="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">Delete</button>
+     </td>
    </tr>`).join("")||`<tr><td colspan="6" class="px-5 py-8 text-center text-sm text-slate-400">No matches yet</td></tr>`;
  }catch(e){document.getElementById("rows").innerHTML="";showError(e.message);}
+}
+async function viewMatch(id){ try{ const d=await Api.getParticipants(id); const list=d.participants||[]; let html=list.length?list.map(p=>`<div class='text-xs p-2 border-b'>${escapeHtml(p.username||p.uid)} - ${escapeHtml((p.inGameNames||[]).join(','))} slots:${escapeHtml((p.slots||[]).join(','))} kills:${p.kills||0} win:${p.winning||0}</div>`).join(''):'<div class="text-sm text-slate-400 p-4">No participants</div>'; const w=window.open('','_blank','width=500,height=600'); w.document.write('<html><body>'+html+'</body></html>'); }catch(e){showToast(e.message,false);} }
+async function openStatusModal(id,cur){
+ const ns=cur==='upcoming'?'ongoing':cur==='ongoing'?'result':'upcoming';
+ if(ns==='ongoing'){ const roomId=prompt('Room ID:'); if(roomId===null) return; const pass=prompt('Room Password:'); if(pass===null) return; const send=confirm('Send notification to joined users?'); try{await Api.updateMatchStatus(id,'ongoing',{roomId,roomPassword:pass,sendNotification:send}); showToast('Status -> ongoing',true); loadMatches();}catch(e){showToast(e.message,false);} }
+ else if(ns==='result'){ let notice=prompt('Notice (optional):')||''; try{ const d=await Api.getParticipants(id); const parts=d.participants||[]; if(!parts.length){showToast('No participants',false);return;} const results=[]; for(const p of parts){ const killsStr=prompt(`Kills for ${p.username||p.uid}:`,'0'); if(killsStr===null) return; const winStr=prompt(`Winning for ${p.username||p.uid}:`,'0'); if(winStr===null) return; results.push({uid:p.uid,playerName:(p.inGameNames||[p.username])[0],kills:Number(killsStr)||0,winning:Number(winStr)||0}); } await Api.updateMatchStatus(id,'result',{results,notice}); showToast('Result saved',true); loadMatches(); }catch(e){showToast(e.message,false);} }
+ else {showToast('Already result',false);}
 }
 async function changeStatus(id,status){
  if(!status) return;
