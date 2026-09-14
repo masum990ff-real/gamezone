@@ -2,7 +2,7 @@ const express = require("express");
 const { FieldValue } = require("firebase-admin/firestore");
 const { getDb, getRtdb, friendlyFirestoreError } = require("../config/firebase");
 const { ok, fail, firebaseAuthMiddleware } = require("../middleware/auth");
-const { payLimiter } = require("../middleware/rateLimit");
+const { payLimiter, webhookLimiter } = require("../middleware/rateLimit");
 
 const router = express.Router();
 
@@ -328,8 +328,17 @@ router.post("/:orderId/refresh", firebaseAuthMiddleware, payLimiter, async (req,
   }
 });
 
-router.post("/webhook", async (req, res) => {
+router.post("/webhook", webhookLimiter, async (req, res) => {
   try {
+    // Server-side webhook verification: if WEBHOOK_SECRET is set on the server,
+    // the gateway must send it as x-webhook-secret. Unset = accept (legacy gateways
+    // without signing), but rate-limited + order must exist in byOrder + confirm
+    // via order-status before any money moves.
+    const expected = process.env.WEBHOOK_SECRET || "";
+    if (expected && req.headers["x-webhook-secret"] !== expected) {
+      console.error("[webhook] rejected: bad/missing webhook secret");
+      return res.status(200).json({ status: "ok" });
+    }
     const { order_id, status, txn_id, amount, utr, environment } = req.body || {};
     console.error("[webhook] order=" + String(order_id || "").slice(0, 40) + " status=" + String(status || "").slice(0, 20) + " amount=" + String(amount == null ? "" : amount).slice(0, 20) + " utr=" + String(utr || "").slice(0, 40) + " env=" + String(environment || "").slice(0, 20) + " txn=" + String(txn_id || "").slice(0, 40));
     if (!order_id) {
