@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GameZone Admin - Staff Management</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/css/premium.css?v=2"/>
+<style>@media(max-width:640px){.glass table{min-width:0!important} .glass table thead{display:none} .glass table tbody tr{display:block;border:1px solid #ede9fe;border-radius:16px;margin:8px;padding:8px;background:rgba(255,255,255,0.9)} .glass table tbody td{display:flex;justify-content:space-between;padding:6px 8px} .glass table tbody td::before{content:attr(data-label);font-weight:700;color:#7c3aed;font-size:11px;text-transform:uppercase}}</style>
+</head>
+<body class="min-h-screen text-slate-800">
+<div class="aurora"><span></span><span></span><span></span></div>
+<div class="flex min-h-screen">
+<button id="menuBtn" class="md:hidden fixed top-4 left-4 z-20 btn-grad text-white rounded-2xl px-3.5 py-2 font-bold">☰</button>
+<aside id="sidebar" class="hidden md:flex flex-col w-64 shrink-0 fixed md:static inset-y-0 left-0 z-10 p-6 text-white" style="background: linear-gradient(180deg,#0f0b2d,#2e1065 70%,#4c1d95);">
+<div class="flex items-center gap-2.5 mb-10"><div class="w-10 h-10 rounded-2xl bg-white text-lg font-extrabold flex items-center justify-center shadow-lg"><span class="grad-text">G</span></div><div><h2 class="text-lg font-extrabold leading-none">GameZone</h2><p class="text-[11px] text-violet-300 mt-1">Admin Panel</p></div></div>
+<nav class="space-y-2 text-sm font-semibold">
+<a href="/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition"> Dashboard</a>
+<a href="/send-notification.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition"> Send Notification</a>
+<a href="/history.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition"> History</a>
+<a href="/users.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition"> Users</a>
+<a href="/categories.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition"> Category Management</a>
+<a href="/matches.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition"> Match Management</a>
+<a href="/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition"> Settings</a>
+<a href="/payment-api.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition"> Payment API</a>
+<a href="/deposits.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition"> Deposits</a>
+<a href="/withdraw.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition"> Withdraw</a>
+<a id="staffLink" href="/staff.html" class="nav-active flex items-center gap-3 px-4 py-3 rounded-2xl text-white"> Staff Management</a>
+</nav>
+<button onclick="Api.logout()" class="text-left px-4 py-3 rounded-2xl text-rose-300 hover:bg-white/10 font-semibold text-sm mt-auto transition">Logout</button>
+</aside>
+<div id="overlay" class="hidden fixed inset-0 bg-black/40 z-[5] md:hidden"></div>
+<main class="flex-1 p-6 md:p-10 pt-16 md:pt-10 w-full max-w-4xl mx-auto">
+<div class="flex items-center justify-between mb-6 anim-in"><div><h1 class="text-2xl md:text-3xl font-extrabold">Staff <span class="grad-text">Management</span></h1><p id="countInfo" class="text-sm text-slate-500 mt-1">Create staff with permissions</p></div><button id="refreshBtn" class="glass card-lift shadow-lg rounded-2xl px-4 py-2.5 text-sm font-bold text-violet-700">Refresh</button></div>
+<div id="errorCard" class="hidden glass border-l-4 !border-l-rose-500 text-rose-700 rounded-2xl px-4 py-3 text-sm mb-4 shadow"><span id="errorText"></span><button id="retryBtn" class="ml-2 font-bold underline">Retry</button></div>
+<form id="addForm" class="anim-in d1 glass shadow-xl rounded-3xl p-6 space-y-4 mb-5">
+<p class="text-sm font-bold">Add Staff</p>
+<div class="grid sm:grid-cols-2 gap-3">
+<input id="addEmail" type="email" placeholder="Staff email" class="border border-violet-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70"/>
+<input id="addPass" type="password" placeholder="Password 6-64 chars" class="border border-violet-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white/70"/>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm" id="permChecks">
+<label class="flex items-center gap-2"><input type="checkbox" value="dashboard" class="perm"/> Dashboard</label>
+<label class="flex items-center gap-2"><input type="checkbox" value="send_notification" class="perm"/> Send Notification</label>
+<label class="flex items-center gap-2"><input type="checkbox" value="history" class="perm"/> History</label>
+<label class="flex items-center gap-2"><input type="checkbox" value="users" class="perm"/> Users</label>
+<label class="flex items-center gap-2"><input type="checkbox" value="categories" class="perm"/> Category</label>
+<label class="flex items-center gap-2"><input type="checkbox" value="matches" class="perm"/> Match</label>
+<label class="flex items-center gap-2"><input type="checkbox" value="settings" class="perm"/> Settings</label>
+<label class="flex items-center gap-2"><input type="checkbox" value="payment-config" class="perm"/> Payment API</label>
+<label class="flex items-center gap-2"><input type="checkbox" value="deposits" class="perm"/> Deposits</label>
+<label class="flex items-center gap-2"><input type="checkbox" value="withdrawals" class="perm"/> Withdraw</label>
+</div>
+<button id="addBtn" type="submit" class="btn-grad text-white font-bold rounded-2xl px-6 py-3">Create Staff</button>
+</form>
+<div class="glass shadow-xl rounded-3xl overflow-hidden anim-in d1"><div class="overflow-x-auto"><table class="w-full text-sm min-w-[640px]"><thead><tr class="text-left text-xs uppercase tracking-wide text-violet-500 border-b border-violet-100 bg-violet-50/50"><th class="px-5 py-3.5">Email</th><th class="px-5 py-3.5">Permissions</th><th class="px-5 py-3.5 text-right">Action</th></tr></thead><tbody id="rows" class="divide-y divide-violet-50"></tbody></table></div></div>
+<div id="toast" class="hidden max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg"></div>
+</main>
+</div>
+<script src="/js/api.js?v=2"></script>
+<script>
+Api.requireAuth();
+(function(){try{const t=localStorage.getItem('gz_token'); if(!t) return; const p=JSON.parse(atob(t.split('.')[1])); if(p.role==='staff'){ const el=document.getElementById('staffLink'); if(el) el.style.display='none'; } }catch(e){}})();
+const sidebar=document.getElementById('sidebar'); const overlay=document.getElementById('overlay');
+function toggleMenu(f){const s=f!==undefined?f:sidebar.classList.contains('hidden');sidebar.classList.toggle('hidden',!s);overlay.classList.toggle('hidden',!s);}
+document.getElementById('menuBtn').addEventListener('click',()=>toggleMenu()); overlay.addEventListener('click',()=>toggleMenu(false));
+function showError(m){document.getElementById('errorText').textContent=m;document.getElementById('errorCard').classList.remove('hidden');}
+function hideError(){document.getElementById('errorCard').classList.add('hidden');}
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function showToast(m,ok){const t=document.getElementById('toast');t.textContent=m;t.className='toast-in max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg '+(ok?'bg-emerald-500 text-white':'bg-rose-500 text-white');}
+async function load(){ hideError(); document.getElementById('rows').innerHTML=[1,2,3].map(()=>`<tr><td colspan="3" class="px-5 py-4"><div class="shimmer h-5">&nbsp;</div></td></tr>`).join(""); try{const data=await Api.getStaffs(); const list=data.staffs||[]; document.getElementById('countInfo').textContent=list.length+' staffs'; document.getElementById('rows').innerHTML=list.map(s=>`<tr class="hover:bg-violet-50/60 transition"><td class="px-5 py-3.5 font-bold" data-label="Email">${escapeHtml(s.email)}</td><td class="px-5 py-3.5 text-xs" data-label="Permissions">${escapeHtml((s.permissions||[]).join(', ')||'-')}</td><td class="px-5 py-3.5 text-right" data-label="Action"><button onclick="delStaff('${s.id}')" class="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl px-4 py-2">Delete</button></td></tr>`).join("")||`<tr><td colspan="3" class="px-5 py-8 text-center text-sm text-slate-400">No staff yet</td></tr>`; }catch(e){document.getElementById('rows').innerHTML="";showError(e.message);}}
+async function delStaff(id){ if(!confirm('Delete staff?')) return; try{await Api.deleteStaff(id);showToast('Deleted',true);load();}catch(e){showToast(e.message,false);} }
+document.getElementById('addForm').addEventListener('submit',async(e)=>{e.preventDefault(); const email=document.getElementById('addEmail').value.trim(); const pass=document.getElementById('addPass').value; const perms=[...document.querySelectorAll('.perm:checked')].map(x=>x.value); if(!email||!pass){showToast('Email and password required',false);return;} const btn=document.getElementById('addBtn');btn.disabled=true;btn.textContent='Creating...'; try{await Api.createStaff(email,pass,perms); document.getElementById('addEmail').value='';document.getElementById('addPass').value='';document.querySelectorAll('.perm').forEach(x=>x.checked=false);showToast('Staff created',true);load();}catch(ex){showToast(ex.message,false);} btn.disabled=false;btn.textContent='Create Staff';});
+document.getElementById('refreshBtn').addEventListener('click',load); document.getElementById('retryBtn').addEventListener('click',load); load();
+</script>
+</body>
+</html>
