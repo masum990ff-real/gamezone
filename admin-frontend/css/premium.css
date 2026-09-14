@@ -114,3 +114,17 @@ body {
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: #c4b5fd; border-radius: 8px; }
+.glass:hover{border-color:rgba(124,58,237,.22); box-shadow:0 10px 36px -12px rgba(76,29,149,.25)}
+button, a{transition:all .18s ease}
+button:hover:not(:disabled), a.btn-grad:hover{filter:brightness(1.05)}
+table tbody tr{transition:background .15s ease}
+@media(max-width:640px){
+ table{min-width:0!important}
+ table thead{display:none}
+ table tbody tr{display:block; border:1px solid #ede9fe; border-radius:18px; margin:10px 8px; padding:10px; background:rgba(255,255,255,.92); box-shadow:0 6px 22px -10px rgba(76,29,149,.2)}
+ table tbody td{display:flex; justify-content:space-between; align-items:center; padding:7px 8px; border:none; font-size:13px}
+ table tbody td::before{content:attr(data-label); font-weight:800; color:#7c3aed; font-size:10px; letter-spacing:.06em; text-transform:uppercase; margin-right:12px}
+ table tbody td:last-child{justify-content:flex-end; flex-wrap:wrap; gap:6px}
+ table tbody td:last-child::before{display:none}
+}
+.chip-active{transform:translateY(-1px); box-shadow:0 8px 20px -8px rgba(124,58,237,.6)}
