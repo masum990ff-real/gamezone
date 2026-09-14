@@ -6,6 +6,10 @@
 <title>GameZone Admin - Match Management</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="/css/premium.css?v=2" />
+<style>
+@media(max-width:640px){.glass table{min-width:0!important}.glass table thead{display:none}.glass table tbody tr{display:block;border:1px solid #ede9fe;border-radius:16px;margin:8px;padding:8px;background:rgba(255,255,255,0.9)}.glass table tbody td{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border:none}.glass table tbody td::before{content:attr(data-label);font-weight:700;color:#7c3aed;font-size:11px;text-transform:uppercase}}
+.chip-active{transform:translateY(-1px);box-shadow:0 6px 18px -6px rgba(124,58,237,.6)}
+</style>
 </head>
 <body class="min-h-screen text-slate-800">
 <div class="aurora"><span></span><span></span><span></span></div>
@@ -47,6 +51,7 @@
 <a href="/withdraw.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition">
 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
  Withdraw</a>
+<a id="staffLink" href="/staff.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-violet-200 hover:bg-white/10 transition"> Staff Management</a>
 </nav>
 <button onclick="Api.logout()" class="text-left px-4 py-3 rounded-2xl text-rose-300 hover:bg-white/10 font-semibold text-sm mt-auto transition">Logout</button>
 </aside>
@@ -81,7 +86,8 @@
  </div>
  <div><label class="block text-xs font-bold mb-1">About / Match Rules</label><textarea id="fAbout" rows="5" maxlength="5000" placeholder="Write match rules..." class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500"></textarea></div>
  <div class="flex gap-2"><button id="createBtn" type="submit" class="btn-grad text-white font-bold rounded-2xl px-6 py-3">Create Match</button><button id="cancelEditBtn" type="button" class="hidden glass border border-violet-200 rounded-2xl px-6 py-3 text-sm font-bold text-violet-700">Cancel</button></div>
-</form>
+ </form>
+<div id="categoryChips" class="flex flex-wrap gap-2 mb-4"></div>
 <div class="flex gap-2 mb-4">
 <select id="filterStatus" class="border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70"><option value="">All status</option><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="result">Result</option></select>
 <select id="filterCategory" class="border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70"><option value="">All categories</option></select>
@@ -102,7 +108,7 @@
 </div>
 <div id="toast" class="hidden max-w-2xl mt-4 rounded-2xl px-4 py-3.5 text-sm font-semibold shadow-lg"></div>
 <div id="viewModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-3xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto"><div class="flex justify-between items-center mb-3"><h3 class="font-bold text-lg">Participants</h3><button onclick="closeViewModal()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold">×</button></div><div id="viewInfo" class="text-xs text-slate-500 mb-3"></div><div id="viewList" class="space-y-2 max-h-[60vh] overflow-y-auto"></div><div class="flex justify-end mt-4"><button onclick="closeViewModal()" class="glass border rounded-xl px-4 py-2 text-sm font-bold">Close</button></div></div></div>
-<div id="ongoingModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-3xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto"><h3 class="font-bold text-lg mb-2">Set Match Ongoing</h3><div id="ongoingInfo" class="text-xs bg-violet-50 rounded-xl p-3 mb-3">Loading participants...</div><label class="block text-xs font-bold mb-1">Room ID *</label><input id="mRoomId" class="w-full border border-violet-200 rounded-xl px-3 py-2 text-sm mb-3" placeholder="Enter Room ID"/><label class="block text-xs font-bold mb-1">Room Password *</label><input id="mRoomPass" class="w-full border border-violet-200 rounded-xl px-3 py-2 text-sm mb-3" placeholder="Enter Password"/><label class="flex items-center gap-2 text-sm mb-4"><input type="checkbox" id="mSend" checked/> Send notification to joined users</label><div class="flex gap-2 justify-end"><button onclick="closeOngoingModal()" class="glass border rounded-xl px-4 py-2 text-sm font-bold">Cancel</button><button onclick="submitOngoing()" class="btn-grad text-white rounded-xl px-5 py-2 text-sm font-bold">Submit</button></div></div></div>
+<div id="ongoingModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-3xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto"><h3 class="font-bold text-lg mb-2">Set Match Ongoing</h3><div id="ongoingInfo" class="text-xs bg-violet-50 rounded-xl p-3 mb-3">Loading participants...</div><label class="block text-xs font-bold mb-1">Room ID *</label><input id="mRoomId" class="w-full border border-violet-200 rounded-xl px-3 py-2 text-sm mb-3" placeholder="Enter Room ID"/><label class="block text-xs font-bold mb-1">Room Password *</label><input id="mRoomPass" class="w-full border border-violet-200 rounded-xl px-3 py-2 text-sm mb-3" placeholder="Enter Password"/><label class="block text-xs font-bold mb-1">Notice (optional)</label><textarea id="mOngoingNotice" rows="2" class="w-full border border-violet-200 rounded-xl px-3 py-2 text-sm mb-3" placeholder="Notice for all participants"></textarea><label class="flex items-center gap-2 text-sm mb-4"><input type="checkbox" id="mSend" checked/> Send notification to joined users</label><div class="flex gap-2 justify-end"><button onclick="closeOngoingModal()" class="glass border rounded-xl px-4 py-2 text-sm font-bold">Cancel</button><button onclick="submitOngoing()" class="btn-grad text-white rounded-xl px-5 py-2 text-sm font-bold">Submit</button></div></div></div>
 <div id="resultModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-3xl p-6 w-full max-w-3xl shadow-xl max-h-[90vh] overflow-y-auto"><h3 class="font-bold text-lg mb-2">Set Result — per gameName entries</h3><p class="text-xs text-slate-500 mb-2">Refund disables Kills/Winning for that entry.</p><div id="resultEntries" class="space-y-2 mb-3 max-h-[50vh] overflow-y-auto border rounded-xl p-2 bg-slate-50"></div><label class="block text-xs font-bold mb-1">Notice (optional)</label><textarea id="mNotice" class="w-full border border-violet-200 rounded-xl px-3 py-2 text-sm mb-3" rows="2" placeholder="Notice for all participants"></textarea><div class="flex gap-2 justify-end"><button onclick="closeResultModal()" class="glass border rounded-xl px-4 py-2 text-sm font-bold">Cancel</button><button onclick="submitResult()" class="btn-grad text-white rounded-xl px-5 py-2 text-sm font-bold">Save Result</button></div></div></div>
 </main>
 </div>
@@ -123,16 +129,23 @@ function isoToLocal(iso){try{const d=new Date(iso);const pad=n=>String(n).padSta
 function resetEdit(){editingId=null;document.getElementById("matchForm").reset();toggleEntryFee();togglePrizeType();const t=document.getElementById("fPrizeTotal");if(t) t.dataset.manual="";document.getElementById("createBtn").textContent="Create Match";document.getElementById("cancelEditBtn").classList.add("hidden");}
 function fmtTime(iso){try{return new Date(iso).toLocaleString();}catch(e){return iso;}}
 function statusPill(s){const l=String(s||"").toLowerCase();if(l==="ongoing") return '<span class="bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full px-3 py-1">ongoing</span>';if(l==="result") return '<span class="bg-slate-200 text-slate-700 text-xs font-bold rounded-full px-3 py-1">result</span>';return '<span class="bg-amber-100 text-amber-700 text-xs font-bold rounded-full px-3 py-1">upcoming</span>';}
-async function loadCategories(){
- try{
-  const data=await Api.getCategories();
-  const cats=data.categories||[];
-  const sel=document.getElementById("fCategory");
-  const fcat=document.getElementById("filterCategory");
-  sel.innerHTML=cats.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("")||'<option value="">No categories</option>';
-  fcat.innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
- }catch(e){showError(e.message);}
-}
+ async function loadCategories(){
+  try{
+   const data=await Api.getCategories();
+   const cats=data.categories||[];
+   const sel=document.getElementById("fCategory");
+   const fcat=document.getElementById("filterCategory");
+   sel.innerHTML=cats.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("")||'<option value="">No categories</option>';
+   fcat.innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+   const chips=document.getElementById("categoryChips");
+   if(chips){
+     const cur=document.getElementById("filterCategory").value;
+     chips.innerHTML='<button onclick="filterByCat(\'\')" class="px-4 py-2 rounded-full text-xs font-bold '+(cur===''?'bg-violet-600 text-white chip-active':'bg-white border border-violet-200 text-violet-700 hover:bg-violet-50')+'">All</button>'+cats.map(c=>`<button onclick="filterByCat('${c.id}')" class="px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1 '+(cur===c.id?'bg-violet-600 text-white chip-active':'bg-white border border-violet-200 text-violet-700 hover:bg-violet-50')+'">${escapeHtml(c.name)} <span onclick="event.stopPropagation();organizeCat('${c.id}')" class="ml-1 bg-violet-100 text-violet-700 rounded-full px-1.5 py-0.5 text-[10px]">↕</span></button>`).join("");
+   }
+  }catch(e){showError(e.message);}
+ }
+ function filterByCat(id){document.getElementById("filterCategory").value=id; loadCategories(); loadMatches();}
+ function organizeCat(id){document.getElementById("filterCategory").value=id; loadMatches(); document.getElementById("rows")?.scrollIntoView({behavior:"smooth"});}
 function toggleEntryFee(){
  const t=document.getElementById("fEntryFeeType").value;
  const inp=document.getElementById("fEntryFee");
@@ -185,13 +198,14 @@ async function loadMatches(){
 let ongoingMatchId=null;
 function closeOngoingModal(){document.getElementById('ongoingModal').classList.add('hidden');}
 async function submitOngoing(){
- const roomId=document.getElementById('mRoomId').value.trim();
- const pass=document.getElementById('mRoomPass').value.trim();
- const send=document.getElementById('mSend').checked;
- if(!roomId){showToast('Room ID required',false);return;}
- if(!pass){showToast('Room Password required',false);return;}
- try{await Api.updateMatchStatus(ongoingMatchId,'ongoing',{roomId,roomPassword:pass,sendNotification:send}); showToast('Status -> ongoing, notified '+ (send?'joined users':'none'),true); closeOngoingModal(); loadMatches();}catch(e){showToast(e.message,false);}
-}
+  const roomId=document.getElementById('mRoomId').value.trim();
+  const pass=document.getElementById('mRoomPass').value.trim();
+  const send=document.getElementById('mSend').checked;
+  const notice=document.getElementById('mOngoingNotice')?document.getElementById('mOngoingNotice').value.trim():"";
+  if(!roomId){showToast('Room ID required',false);return;}
+  if(!pass){showToast('Room Password required',false);return;}
+  try{await Api.updateMatchStatus(ongoingMatchId,'ongoing',{roomId,roomPassword:pass,sendNotification:send,notice}); showToast('Status -> ongoing, notified '+ (send?'joined users':'none'),true); closeOngoingModal(); loadMatches();}catch(e){showToast(e.message,false);}
+ }
 function closeViewModal(){document.getElementById('viewModal').classList.add('hidden');}
 async function viewMatch(id){
   try{
@@ -240,11 +254,12 @@ async function submitResult(){
 }
 async function openStatusModal(id,cur){
   const ns=cur==='upcoming'?'ongoing':cur==='ongoing'?'result':cur==='result'?'result':'upcoming';
- if(ns==='ongoing'){
-  ongoingMatchId=id;
-  document.getElementById('mRoomId').value=''; document.getElementById('mRoomPass').value=''; document.getElementById('mSend').checked=true;
-  document.getElementById('ongoingInfo').innerHTML='Loading participants...';
-  document.getElementById('ongoingModal').classList.remove('hidden');
+  if(ns==='ongoing'){
+   ongoingMatchId=id;
+   document.getElementById('mRoomId').value=''; document.getElementById('mRoomPass').value=''; document.getElementById('mSend').checked=true; if(document.getElementById('mOngoingNotice')) document.getElementById('mOngoingNotice').value='';
+   document.getElementById('ongoingInfo').innerHTML='Loading participants...';
+   document.getElementById('ongoingModal').classList.remove('hidden');
+   Api.getMatch(id).then(mm=>{const n=(mm.match||mm).notice||""; if(n && document.getElementById('mOngoingNotice')) document.getElementById('mOngoingNotice').value=n;}).catch(()=>{});
   try{
    const d=await Api.getParticipants(id); const list=d.participants||[];
    let totalEntries=0; for(const p of list){ const n=Math.max((p.inGameNames||[]).length,(p.slots||[]).length,1); totalEntries+=n; }
@@ -262,34 +277,35 @@ async function openStatusModal(id,cur){
   }catch(e){ document.getElementById('ongoingInfo').textContent='Failed to load participants: '+e.message; }
   return;
  }
- else if(ns==='result'){
-  try{
-   const d=await Api.getParticipants(id); const list=d.participants||[]; if(!list.length){showToast('No participants',false);return;}
-   resultMatchId=id;
-   const container=document.getElementById('resultEntries'); container.innerHTML='';
-   let idx=1;
-   for(const p of list){
-    const names=p.inGameNames||[]; const slots=p.slots||[]; const killsList=p.killsList||[]; const winningList=p.winningList||[]; const refundedList=p.refundedList||[];
-    const n=Math.max(names.length, slots.length,1);
-    for(let i=0;i<n;i++){
-     const gn=names[i]||''; const sl=slots[i]|| (i+1);
-     const k=killsList[i]!=null?killsList[i]:(p.kills||0);
-     const w=winningList[i]!=null?winningList[i]:(p.winning||0);
-     const ref=!!refundedList[i];
-     const row=document.createElement('div'); row.className='flex flex-wrap gap-2 items-end bg-white rounded-xl p-2 border';
-      row.setAttribute('data-uid', p.uid); row.setAttribute('data-slot', String(sl)); row.setAttribute('data-gn', gn);
-       const disAttr = ref?'disabled':'';
-       const opClass = ref?'opacity-50 pointer-events-none':'';
-       row.innerHTML=`<div class="w-6 text-xs font-bold text-slate-500">#${idx}</div><div class="flex-1 min-w-[120px]"><div class="text-xs font-bold">${escapeHtml(p.username||p.uid)}</div><div class="text-xs text-violet-700 font-medium">${escapeHtml(gn||'-')}</div><div class="text-[10px] text-slate-400">Slot: ${escapeHtml(String(sl))} | UID: ${escapeHtml(p.uid.slice(0,8))}</div></div><div class="${opClass}"><label class="block text-[10px] font-bold">Kills</label><input type="number" min="0" max="999" value="${k}" class="inpKills w-16 border border-violet-200 rounded-lg px-2 py-1 text-sm" ${disAttr}/></div><div class="${opClass}"><label class="block text-[10px] font-bold">Winning ₹</label><input type="number" min="0" max="100000" value="${w}" class="inpWin w-20 border border-violet-200 rounded-lg px-2 py-1 text-sm" ${disAttr}/></div><div><label class="flex items-center gap-1 text-xs"><input type="checkbox" class="inpRefund" ${ref?'checked':''}/> Refund${ref?' (refund done)':''}</label></div>`;
-      const cb=row.querySelector('.inpRefund'); if(cb){ cb.addEventListener('change',()=>{ const dis=cb.checked; row.querySelector('.inpKills').disabled=dis; row.querySelector('.inpWin').disabled=dis; row.querySelector('.inpKills').parentElement.classList.toggle('opacity-50',dis); row.querySelector('.inpWin').parentElement.classList.toggle('opacity-50',dis); row.querySelector('.inpKills').parentElement.classList.toggle('pointer-events-none',dis); row.querySelector('.inpWin').parentElement.classList.toggle('pointer-events-none',dis); }); if(ref){ row.querySelector('.inpKills').disabled=true; row.querySelector('.inpWin').disabled=true; } }
-      container.appendChild(row); idx++;
+  else if(ns==='result'){
+   try{
+    const d=await Api.getParticipants(id); const list=d.participants||[]; if(!list.length){showToast('No participants',false);return;}
+    resultMatchId=id;
+    const container=document.getElementById('resultEntries'); container.innerHTML='';
+    let idx=1;
+    for(const p of list){
+     const names=p.inGameNames||[]; const slots=p.slots||[]; const killsList=p.killsList||[]; const winningList=p.winningList||[]; const refundedList=p.refundedList||[];
+     const n=Math.max(names.length, slots.length,1);
+     for(let i=0;i<n;i++){
+      const gn=names[i]||''; const sl=slots[i]|| (i+1);
+      const k=killsList[i]!=null?killsList[i]:(p.kills||0);
+      const w=winningList[i]!=null?winningList[i]:(p.winning||0);
+      const ref=!!refundedList[i];
+      const row=document.createElement('div'); row.className='flex flex-wrap gap-2 items-end bg-white rounded-xl p-2 border';
+       row.setAttribute('data-uid', p.uid); row.setAttribute('data-slot', String(sl)); row.setAttribute('data-gn', gn);
+        const disAttr = ref?'disabled':'';
+        const opClass = ref?'opacity-50 pointer-events-none':'';
+        row.innerHTML=`<div class="w-6 text-xs font-bold text-slate-500">#${idx}</div><div class="flex-1 min-w-[120px]"><div class="text-xs font-bold">${escapeHtml(p.username||p.uid)}</div><div class="text-xs text-violet-700 font-medium">${escapeHtml(gn||'-')}</div><div class="text-[10px] text-slate-400">Slot: ${escapeHtml(String(sl))} | UID: ${escapeHtml(p.uid.slice(0,8))}</div></div><div class="${opClass}"><label class="block text-[10px] font-bold">Kills</label><input type="number" min="0" max="999" value="${k}" class="inpKills w-16 border border-violet-200 rounded-lg px-2 py-1 text-sm" ${disAttr}/></div><div class="${opClass}"><label class="block text-[10px] font-bold">Winning ₹</label><input type="number" min="0" max="100000" value="${w}" class="inpWin w-20 border border-violet-200 rounded-lg px-2 py-1 text-sm" ${disAttr}/></div><div><label class="flex items-center gap-1 text-xs"><input type="checkbox" class="inpRefund" ${ref?'checked':''}/> Refund${ref?' (refund done)':''}</label></div>`;
+       const cb=row.querySelector('.inpRefund'); if(cb){ cb.addEventListener('change',()=>{ const dis=cb.checked; row.querySelector('.inpKills').disabled=dis; row.querySelector('.inpWin').disabled=dis; row.querySelector('.inpKills').parentElement.classList.toggle('opacity-50',dis); row.querySelector('.inpWin').parentElement.classList.toggle('opacity-50',dis); row.querySelector('.inpKills').parentElement.classList.toggle('pointer-events-none',dis); row.querySelector('.inpWin').parentElement.classList.toggle('pointer-events-none',dis); }); if(ref){ row.querySelector('.inpKills').disabled=true; row.querySelector('.inpWin').disabled=true; } }
+       container.appendChild(row); idx++;
+     }
     }
-   }
-   document.getElementById('mNotice').value='';
-   document.getElementById('resultModal').classList.remove('hidden');
-  }catch(e){showToast(e.message,false);}
-  return;
- }
+    let prevNotice=""; try{const mm=await Api.getMatch(id); prevNotice=(mm.match||mm).notice||"";}catch(e){}
+    document.getElementById('mNotice').value=prevNotice;
+    document.getElementById('resultModal').classList.remove('hidden');
+   }catch(e){showToast(e.message,false);}
+   return;
+  }
  else {showToast('Already result',false);}
 }
 async function changeStatus(id,status){
