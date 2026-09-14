@@ -169,19 +169,36 @@ router.get("/", authMiddleware, async (req, res) => {
     const q = String(req.query.q || "").trim();
     const db = getDb();
     const col = db.collection("users");
+    // Cursor pagination: ?cursor=<lastSeen lastActive>&limit= uses startAfter —
+    // zero skip-reads. Legacy ?page= offset fallback kept for admin panel.
+    const cursor = String(req.query.cursor || "");
     if (q) {
       const base = col.orderBy("username").startAt(q).endAt(q + "\uf8ff");
       const totalSnap = await base.count().get();
       const total = totalSnap.data().count;
       const snap = await base.limit(limit).offset((page - 1) * limit).get();
       const items = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
-      return ok(res, { items, page, limit, total, totalPages: Math.ceil(total / limit) }, "");
+      return ok(res, { items, page, limit, total, totalPages: Math.ceil(total / limit), nextCursor: "" }, "");
     }
+    const ordered = col.orderBy("lastActive", "desc");
     const totalSnap = await col.count().get();
     const total = totalSnap.data().count;
-    const snap = await col.orderBy("lastActive", "desc").limit(limit).offset((page - 1) * limit).get();
+    if (cursor) {
+      const snap = await ordered.startAfter(cursor).limit(limit).get();
+      const items = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+      const last = snap.docs[snap.docs.length - 1];
+      return ok(res, {
+        items, page, limit, total, totalPages: Math.ceil(total / limit),
+        nextCursor: snap.docs.length === limit && last ? String(last.data().lastActive || "") : "",
+      }, "");
+    }
+    const snap = await ordered.limit(limit).offset((page - 1) * limit).get();
     const items = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
-    return ok(res, { items, page, limit, total, totalPages: Math.ceil(total / limit) }, "");
+    const last = snap.docs[snap.docs.length - 1];
+    return ok(res, {
+      items, page, limit, total, totalPages: Math.ceil(total / limit),
+      nextCursor: snap.docs.length === limit && last ? String(last.data().lastActive || "") : "",
+    }, "");
   } catch (e) {
     console.error("User list failed:", e.message);
     return fail(res, 500, "Failed to load users: " + friendlyFirestoreError(e));
