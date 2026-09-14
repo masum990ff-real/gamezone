@@ -42,12 +42,16 @@ const Api = (() => {
     location.href = "/login.html";
   }
 
+  function getPayload(){try{const t=getToken(); if(!t) return null; return JSON.parse(atob(t.split('.')[1]));}catch(e){return null;}}
+  function applyStaffUi(){try{const p=getPayload(); if(!p||p.role!=='staff') return; const el=document.getElementById('staffLink'); if(el) el.style.display='none'; const perms=p.permissions||[]; const map={dashboard:'dashboard.html',send_notification:'send-notification.html',history:'history.html',users:'users.html',categories:'categories.html',matches:'matches.html',settings:'settings.html','payment-config':'payment-api.html',deposits:'deposits.html',withdrawals:'withdraw.html'}; document.querySelectorAll('#sidebar a').forEach(a=>{const href=(a.getAttribute('href')||'').replace('/',''); for(const k in map){if(map[k]===href && !perms.includes(k) && !perms.includes('*')) a.style.display='none';}});}catch(e){}}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',applyStaffUi); else setTimeout(applyStaffUi,0);
   return {
     getToken,
     setToken,
     clearToken,
     requireAuth,
     logout,
+    getPayload,
     login: (email, password) =>
       request("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
     sendNotification: (title, body, imageUrl) =>
@@ -113,5 +117,9 @@ const Api = (() => {
     getWithdrawals: (page,limit) => request(`/api/withdrawals?page=${page||1}&limit=${limit||20}`),
     updateWithdraw: (id,action) => request(`/api/withdrawals/${id}/status`,{method:"PUT",body:JSON.stringify({action})}),
     getLeaderboard: (period) => fetch(`/api/leaderboard?period=${period||"fulltime"}`).then(r=>r.json()).then(b=>{ if(!b.success) throw new Error(b.message); return b.data; }),
+    getStaffs: () => request("/api/staff"),
+    createStaff: (email,password,permissions) => request("/api/staff",{method:"POST",body:JSON.stringify({email,password,permissions})}),
+    deleteStaff: (id) => request(`/api/staff/${id}`,{method:"DELETE"}),
+    updateStaff: (id,payload) => request(`/api/staff/${id}`,{method:"PUT",body:JSON.stringify(payload)}),
   };
 })();
