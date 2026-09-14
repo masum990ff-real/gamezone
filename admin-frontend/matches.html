@@ -75,8 +75,9 @@
 <div><label class="block text-xs font-bold mb-1">Version</label><select id="fVersion" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500"><option value="TPP">TPP</option><option value="FPP">FPP</option></select></div>
 <div><label class="block text-xs font-bold mb-1">Map</label><input id="fMap" type="text" maxlength="30" placeholder="IRON CAGE" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500" /></div>
 <div><label class="block text-xs font-bold mb-1">Slots</label><input id="fSlots" type="number" min="2" max="100" placeholder="2" class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500" /></div>
-</div>
-<button id="createBtn" type="submit" class="btn-grad text-white font-bold rounded-2xl px-6 py-3">Create Match</button>
+ </div>
+ <div><label class="block text-xs font-bold mb-1">About / Match Rules</label><textarea id="fAbout" rows="5" maxlength="5000" placeholder="Write match rules..." class="w-full border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70 focus:outline-none focus:ring-2 focus:ring-violet-500"></textarea></div>
+ <button id="createBtn" type="submit" class="btn-grad text-white font-bold rounded-2xl px-6 py-3">Create Match</button>
 </form>
 <div class="flex gap-2 mb-4">
 <select id="filterStatus" class="border border-violet-200 rounded-2xl px-4 py-2.5 text-sm bg-white/70"><option value="">All status</option><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="result">Result</option></select>
@@ -170,9 +171,10 @@ document.getElementById("matchForm").addEventListener("submit",async(e)=>{
   entryFee: Number(document.getElementById("fEntryFee").value),
   teamType: document.getElementById("fTeamType").value,
   version: document.getElementById("fVersion").value,
-  map: document.getElementById("fMap").value.trim(),
-  slots: Number(document.getElementById("fSlots").value)
- };
+   map: document.getElementById("fMap").value.trim(),
+   slots: Number(document.getElementById("fSlots").value),
+   about: document.getElementById("fAbout").value
+  };
  if(!payload.categoryId){showToast("Select category",false);return;}
  const btn=document.getElementById("createBtn");btn.disabled=true;btn.textContent="Creating...";
  try{await Api.createMatch(payload);showToast("Match created!",true);document.getElementById("matchForm").reset();toggleEntryFee();loadMatches();}catch(ex){showToast(ex.message,false);}
