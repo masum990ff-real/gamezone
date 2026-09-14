@@ -110,5 +110,8 @@ const Api = (() => {
     deleteMatch: (id) => request(`/api/matches/${id}`, { method: "DELETE" }),
     getParticipants: (id) => fetch(`/api/matches/${id}/participants`).then((r)=>r.json()).then((b)=>{ if(!b.success) throw new Error(b.message); return b.data;}),
     updateMatchStatus: (id,status,extra) => request(`/api/matches/${id}/status`,{method:"PUT",body:JSON.stringify(Object.assign({status},extra||{}))}),
+    getWithdrawals: (page,limit) => request(`/api/withdrawals?page=${page||1}&limit=${limit||20}`),
+    updateWithdraw: (id,action) => request(`/api/withdrawals/${id}/status`,{method:"PUT",body:JSON.stringify({action})}),
+    getLeaderboard: (period) => fetch(`/api/leaderboard?period=${period||"fulltime"}`).then(r=>r.json()).then(b=>{ if(!b.success) throw new Error(b.message); return b.data; }),
   };
 })();
