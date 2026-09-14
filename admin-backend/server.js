@@ -10,7 +10,32 @@ const PORT = process.env.PORT || 3000;
 
 const origins = (process.env.CORS_ORIGINS || "http://localhost:3000").split(",");
 app.use(cors({ origin: origins }));
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
+
+// Security headers for backend + same-origin admin panel (no extra dep).
+// HTTPS-only is enforced by Render (HSTS); local http://10.0.2.2 stays usable.
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  if ((req.headers["x-forwarded-proto"] || req.protocol) === "https") {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  res.setHeader("Content-Security-Policy",
+    "default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; " +
+    "script-src 'self' https://cdn.tailwindcss.com; img-src 'self' data: https:; connect-src 'self'");
+  next();
+});
+
+// Audit trail: who did what, when (admin writes only, no secrets logged).
+app.use("/api", (req, res, next) => {
+  if (["POST", "PUT", "DELETE"].includes(req.method)) {
+    const who = (req.headers.authorization || "").slice(0, 24) + "...";
+    console.error("[audit] " + req.method + " " + req.path + " auth=" + who);
+  }
+  next();
+});
 
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api", require("./routes/tokens"));
