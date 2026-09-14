@@ -1,4 +1,5 @@
 const express = require("express");
+const { FieldValue } = require("firebase-admin/firestore");
 const { getRtdb, getDb, getMessaging } = require("../config/firebase");
 const { ok, fail, authMiddleware, firebaseAuthMiddleware } = require("../middleware/auth");
 const { catLimiter } = require("../middleware/rateLimit");
@@ -96,7 +97,13 @@ router.get("/:id/participants",catLimiter,async(req,res)=>{
   const id=String(req.params.id||"").trim();
   const snap=await getRtdb().ref("matches/"+id+"/participants").get();
   const val=snap.exists()?snap.val():{};
-  let list=Object.values(val);
+  let entries=Object.entries(val);
+  let list=entries.map(([k,p])=>{
+   if(!p||typeof p!=="object") return null;
+   const uid=String(p.uid||k||"").trim();
+   if(!uid) return null;
+   return {...p, _key:k, uid};
+  }).filter(Boolean);
   try{
    const db=getDb();
    const uids=[...new Set(list.map(p=>String(p.uid||"").trim()).filter(Boolean))].slice(0,100);
@@ -247,7 +254,7 @@ router.post("/:id/join",firebaseAuthMiddleware,catLimiter,async(req,res)=>{
    const histRef=db.collection("wallet_history").doc();
    t.set(histRef,{uid,matchId:id,type:"join",amount:totalFee,depositDeduct:ck.depositDeduct,bonusDeduct:ck.bonusDeduct,winDeduct:ck.winDeduct,slots:selectedSlots,inGameNames:namesArr,createdAt:now});
   }).catch(e=>{if(e.message==="INSUFFICIENT") throw e; throw e;});
-  const part={uid,username,inGameNames:namesArr.length?namesArr:Array(selectedSlots.length).fill(username),slots:selectedSlots,kills:0,winning:0,entryFeePaid:totalFee,createdAt:now,depositDeduct:ded.depositDeduct,bonusDeduct:ded.bonusDeduct,winDeduct:ded.winDeduct};
+  const part={uid,username,inGameNames:namesArr.length?namesArr:Array(selectedSlots.length).fill(username),slots:selectedSlots,kills:0,winning:0,killsList:Array(selectedSlots.length).fill(0),winningList:Array(selectedSlots.length).fill(0),refundedList:Array(selectedSlots.length).fill(false),entryFeePaid:totalFee,createdAt:now,depositDeduct:ded.depositDeduct,bonusDeduct:ded.bonusDeduct,winDeduct:ded.winDeduct};
   await getRtdb().ref(`matches/${id}/participants/${uid}`).set(part);
   await getRtdb().ref(`matches/${id}`).update({filledSlots:filled+slotCount});
   return ok(res,{joined:true,deduct:ded,totalFee},"Joined");
@@ -305,36 +312,162 @@ router.put("/:id/status",authMiddleware,catLimiter,async(req,res)=>{
    const fresh=await getRtdb().ref(`matches/${id}`).get();
    return ok(res,{id,...fresh.val()},"Status -> ongoing");
   } else {
-   if(cur!=="ongoing") return fail(res,400,"Only ongoing -> result allowed");
+   if(cur!=="ongoing" && cur!=="result") return fail(res,400,"Only ongoing -> result allowed");
    const results=Array.isArray(body.results)?body.results:[];
    const notice=String(body.notice||"").slice(0,1000);
-   if(!results.length) return fail(res,400,"results required");
-   const parts=m.participants||{};
+   if(!results.length && !Array.isArray(body.refunds)) return fail(res,400,"results required");
+   if(!results.length && Array.isArray(body.refunds) && !body.refunds.length) return fail(res,400,"results required");
+   let parts=m.participants||{};
    const db=getDb();
-   for(const r of results){
-    const uid=String(r.uid||"");
-    const kills=Number(r.kills||0);
-    const winning=Number(r.winning||0);
-    if(!uid||!parts[uid]) continue;
-    const playerName=String(r.playerName||parts[uid].inGameNames?.[0]||parts[uid].username||"");
-    try{
-     const uref=db.collection("users").doc(uid);
-     await db.runTransaction(async t=>{
-      const snap2=await t.get(uref);
-      if(!snap2.exists) return;
-      const d=snap2.data()||{};
-      const upd={winCoins:Number(d.winCoins||0)+winning,lifetimeWin:Number(d.lifetimeWin||0)+winning,kills:Number(d.kills||0)+kills,matchesPlayed:Number(d.matchesPlayed||0)};
-      if(winning>0){
-       const wh=db.collection("wallet_history").doc();
-       t.set(wh,{uid,matchId:id,type:"winning",amount:winning,kills,playerName,createdAt:new Date().toISOString()});
-      }
-      t.update(uref,upd);
-     });
-    }catch(e){console.error("result update user",uid,e.message);}
-    await getRtdb().ref(`matches/${id}/participants/${uid}`).update({kills,winning,playerName});
+   const rtdb=getRtdb();
+   const now=new Date().toISOString();
+   const entryFeePer=Number(m.entryFee||0);
+   const isFree=String(m.entryFeeType||"").toLowerCase()==="free" || entryFeePer===0;
+   function findKeysForUid(uid){
+    return Object.entries(parts).filter(([k,v])=> String(v && v.uid ? v.uid : k).trim() === String(uid).trim()).map(([k,v])=>({key:k, data:v}));
    }
-   await getRtdb().ref(`matches/${id}`).update({status:"result",notice,results});
-   const fresh2=await getRtdb().ref(`matches/${id}`).get();
+   let updates={};
+   for(const r of results){
+    const uid=String(r.uid||"").trim();
+    if(!uid) continue;
+    let slot=r.slot!=null&&r.slot!==""?Number(r.slot):(r.slotNumber!=null?Number(r.slotNumber):null);
+    if(slot!=null && isNaN(slot)) slot=null;
+    const gameName=r.gameName||r.playerName||null;
+    let kills=Number(r.kills); if(isNaN(kills)||kills<0) kills=0; if(kills>999) kills=999;
+    let winning=Number(r.winning); if(isNaN(winning)||winning<0) winning=0; if(winning>100000) winning=100000;
+    const refund=!!r.refund;
+    const entryIdx=r.entryIndex!=null?Number(r.entryIndex):null;
+    const cands=findKeysForUid(uid);
+    if(!cands.length) continue;
+    if(cands.length===1){
+     const {key, data} = cands[0];
+     let names=Array.isArray(data.inGameNames)? data.inGameNames.slice() : (data.gameName? [String(data.gameName)] : []);
+     let slotsArr=Array.isArray(data.slots)? data.slots.slice() : (data.slot!=null?[Number(data.slot)]:[]);
+     if(!names.length && slotsArr.length) names=slotsArr.map(s=> String(data.username||"Player")+s);
+     if(!names.length) names=[String(data.username||uid)];
+     if(!slotsArr.length) slotsArr=names.map((_,i)=>i+1);
+     let idx=-1;
+     if(slot!=null) idx=slotsArr.findIndex(s=> Number(s)===Number(slot));
+     if(idx===-1 && gameName) idx=names.findIndex(n=> String(n).trim().toLowerCase()===String(gameName).trim().toLowerCase());
+     if(idx===-1 && entryIdx!=null && entryIdx>=0 && entryIdx < names.length) idx=entryIdx;
+     if(idx===-1 && names.length===1) idx=0;
+     if(idx===-1) idx=0;
+     if(idx<0||idx>=names.length) continue;
+     let winningList=Array.isArray(data.winningList)? data.winningList.slice() : Array(names.length).fill(0);
+     let killsList=Array.isArray(data.killsList)? data.killsList.slice() : Array(names.length).fill(0);
+     let refundedList=Array.isArray(data.refundedList)? data.refundedList.slice() : Array(names.length).fill(false);
+     while(winningList.length < names.length) winningList.push(0);
+     while(killsList.length < names.length) killsList.push(0);
+     while(refundedList.length < names.length) refundedList.push(false);
+     winningList=winningList.map(v=>Number(v)||0);
+     killsList=killsList.map(v=>Number(v)||0);
+     const oldWinning=Number(winningList[idx]||0);
+     const oldKills=Number(killsList[idx]||0);
+     const deltaWin=winning - oldWinning;
+     const deltaKills=kills - oldKills;
+     if(deltaWin!==0 || deltaKills!==0){
+      try{
+       const uref=db.collection("users").doc(uid);
+       await db.runTransaction(async t=>{
+        const s=await t.get(uref);
+        if(!s.exists) return;
+        const d=s.data()||{};
+        const curWin=Number(d.winCoins||0);
+        const curLife=Number(d.lifetimeWin||0);
+        const curKills=Number(d.kills||0);
+        const upd={};
+        if(deltaWin!==0){ upd.winCoins=curWin+deltaWin; if(deltaWin>0) upd.lifetimeWin=curLife+deltaWin; }
+        if(deltaKills!==0) upd.kills=curKills+deltaKills;
+        if(Object.keys(upd).length) t.update(uref, upd);
+        if(deltaWin>0){
+         const wh=db.collection("wallet_history").doc();
+         t.set(wh,{uid,matchId:id,type:"winning",amount:deltaWin,gameName:names[idx]||gameName||"",slot:slotsArr[idx]||slot,kills,playerName:names[idx]||"",createdAt:now});
+        }
+       });
+      }catch(e){console.error("delta winning failed",uid,e.message);}
+     }
+     if(refund && !refundedList[idx] && !isFree){
+      try{
+       const uref=db.collection("users").doc(uid);
+       await db.runTransaction(async t=>{
+        const s=await t.get(uref);
+        if(!s.exists) return;
+        const d=s.data()||{};
+        t.update(uref,{winCoins: Number(d.winCoins||0)+entryFeePer, depositCoins: Number(d.depositCoins||0)});
+        const wh=db.collection("wallet_history").doc();
+        t.set(wh,{uid,matchId:id,type:"refund",amount:entryFeePer,gameName:names[idx]||"",slot:slotsArr[idx]||slot,createdAt:now});
+       });
+      }catch(e){console.error("refund failed",e.message);}
+      refundedList[idx]=true;
+     }
+     if(refund && refundedList[idx] && !r.refund && false){}
+     killsList[idx]=kills;
+     winningList[idx]=winning;
+     const totalKills=killsList.reduce((a,b)=>a+Number(b||0),0);
+     const totalWinning=winningList.reduce((a,b)=>a+Number(b||0),0);
+     const merged={...data, kills:totalKills, winning:totalWinning, killsList, winningList, refundedList};
+     if(updates[key]){ Object.assign(updates[key], merged); } else { updates[key]=merged; }
+     parts[key]=merged;
+    } else {
+     let matched=null;
+     for(const c of cands){
+      const cnames=Array.isArray(c.data.inGameNames)? c.data.inGameNames : (c.data.gameName? [String(c.data.gameName)] : []);
+      const cslots=Array.isArray(c.data.slots)? c.data.slots : (c.data.slot!=null? [Number(c.data.slot)] : []);
+      if(slot!=null && cslots.includes(Number(slot))) {matched=c; break;}
+      if(gameName && cnames.some(n=> String(n).trim().toLowerCase()===String(gameName).trim().toLowerCase())) {matched=c; break;}
+     }
+     if(!matched) matched=cands[0];
+     const {key, data}=matched;
+     const oldWinning=Number(data.winning||0);
+     const oldKills=Number(data.kills||0);
+     const deltaWin=winning - oldWinning;
+     const deltaKills=kills - oldKills;
+     if(deltaWin!==0 || deltaKills!==0){
+      try{
+       const uref=db.collection("users").doc(uid);
+       await db.runTransaction(async t=>{
+        const s=await t.get(uref);
+        if(!s.exists) return;
+        const d=s.data()||{};
+        const upd={};
+        if(deltaWin!==0){ upd.winCoins=Number(d.winCoins||0)+deltaWin; if(deltaWin>0) upd.lifetimeWin=Number(d.lifetimeWin||0)+deltaWin; }
+        if(deltaKills!==0) upd.kills=Number(d.kills||0)+deltaKills;
+        if(Object.keys(upd).length) t.update(uref,upd);
+        if(deltaWin>0){
+         const wh=db.collection("wallet_history").doc();
+         t.set(wh,{uid,matchId:id,type:"winning",amount:deltaWin,gameName:gameName||data.inGameNames?.[0]||"",slot,kills,playerName:gameName||"",createdAt:now});
+        }
+       });
+      }catch(e){console.error("pushId delta failed",e.message);}
+     }
+     if(refund && !data.refunded && !isFree){
+      try{
+       const uref=db.collection("users").doc(uid);
+       await db.runTransaction(async t=>{
+        const s=await t.get(uref);
+        if(!s.exists) return;
+        const d=s.data()||{};
+        t.update(uref,{winCoins:Number(d.winCoins||0)+entryFeePer});
+        const wh=db.collection("wallet_history").doc();
+        t.set(wh,{uid,matchId:id,type:"refund",amount:entryFeePer,gameName:gameName||"",slot,createdAt:now});
+       });
+      }catch(e){}
+     }
+     const merged={...data, kills, winning, refunded: refund?true:!!data.refunded};
+     updates[key]=merged;
+     parts[key]=merged;
+    }
+   }
+   for(const [k,v] of Object.entries(updates)){
+    const payload={kills:v.kills, winning:v.winning};
+    if(v.killsList) payload.killsList=v.killsList;
+    if(v.winningList) payload.winningList=v.winningList;
+    if(v.refundedList) payload.refundedList=v.refundedList;
+    if(v.refunded!=null) payload.refunded=v.refunded;
+    await rtdb.ref(`matches/${id}/participants/${k}`).update(payload);
+   }
+   await rtdb.ref(`matches/${id}`).update({status:"result",notice,results, updatedAt:now});
+   const fresh2=await rtdb.ref(`matches/${id}`).get();
    return ok(res,{id,...fresh2.val()},"Result saved");
   }
  }catch(e){console.error("status update failed",e.message);return fail(res,500,"Failed: "+e.message);}
