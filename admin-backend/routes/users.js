@@ -1,8 +1,8 @@
 const express = require("express");
 const { FieldValue } = require("firebase-admin/firestore");
 const { getDb, getApp, getRtdb, friendlyFirestoreError } = require("../config/firebase");
-const { ok, fail, authMiddleware, firebaseAuthMiddleware } = require("../middleware/auth");
-const { syncLimiter } = require("../middleware/rateLimit");
+const { ok, fail, authMiddleware, requirePermission, firebaseAuthMiddleware } = require("../middleware/auth");
+const { syncLimiter, userListLimiter } = require("../middleware/rateLimit");
 
 const router = express.Router();
 
@@ -16,7 +16,7 @@ router.get("/resolve-refer", syncLimiter, async (req, res) => {
     return ok(res, { username: code }, "Valid refer code");
   } catch (e) {
     console.error("Resolve refer failed:", e.message);
-    return fail(res, 500, "Failed to check refer code: " + friendlyFirestoreError(e));
+    return fail(res, 500, "Failed to check refer code");
   }
 });
 
@@ -32,7 +32,7 @@ router.get("/resolve-username", syncLimiter, async (req, res) => {
     return ok(res, { username: name }, "Username available");
   } catch (e) {
     console.error("Resolve username failed:", e.message);
-    return fail(res, 500, "Failed to check username: " + friendlyFirestoreError(e));
+    return fail(res, 500, "Failed to check username");
   }
 });
 
@@ -54,7 +54,7 @@ router.post("/resolve-login", syncLimiter, async (req, res) => {
     return ok(res, { email: snap.docs[0].data().email || "" }, "");
   } catch (e) {
     console.error("Resolve login failed:", e.message);
-    return fail(res, 500, "Failed to resolve login: " + friendlyFirestoreError(e));
+    return fail(res, 500, "Failed to resolve login");
   }
 });
 
@@ -144,7 +144,7 @@ router.post("/sync", firebaseAuthMiddleware, syncLimiter, async (req, res) => {
     return ok(res, { uid: req.user.uid, ...profile }, "Profile synced");
   } catch (e) {
     console.error("User sync failed:", e.message);
-    return fail(res, 500, "Failed to sync profile: " + friendlyFirestoreError(e));
+    return fail(res, 500, "Failed to sync profile");
   }
 });
 
@@ -158,11 +158,11 @@ router.get("/me", firebaseAuthMiddleware, async (req, res) => {
     return ok(res, { uid: req.user.uid, ...profile }, "");
   } catch (e) {
     console.error("User me failed:", e.message);
-    return fail(res, 500, "Failed to load profile: " + friendlyFirestoreError(e));
+    return fail(res, 500, "Failed to load profile");
   }
 });
 
-router.get("/", authMiddleware, async (req, res) => {
+router.get("/", authMiddleware, userListLimiter, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
@@ -201,11 +201,11 @@ router.get("/", authMiddleware, async (req, res) => {
     }, "");
   } catch (e) {
     console.error("User list failed:", e.message);
-    return fail(res, 500, "Failed to load users: " + friendlyFirestoreError(e));
+    return fail(res, 500, "Failed to load users");
   }
 });
 
-router.post("/:uid/ban", authMiddleware, async (req, res) => {
+router.post("/:uid/ban", authMiddleware, requirePermission("users"), async (req, res) => {
   try {
     const reason = (req.body && req.body.reason) || "";
     const db = getDb();
@@ -219,11 +219,11 @@ router.post("/:uid/ban", authMiddleware, async (req, res) => {
     return ok(res, {}, "User banned");
   } catch (e) {
     console.error("Ban failed:", e.message);
-    return fail(res, 500, "Failed to ban user: " + friendlyFirestoreError(e));
+    return fail(res, 500, "Failed to ban user");
   }
 });
 
-router.post("/:uid/unban", authMiddleware, async (req, res) => {
+router.post("/:uid/unban", authMiddleware, requirePermission("users"), async (req, res) => {
   try {
     const db = getDb();
     await db.collection("users").doc(req.params.uid).set({
@@ -234,7 +234,7 @@ router.post("/:uid/unban", authMiddleware, async (req, res) => {
     return ok(res, {}, "User unbanned");
   } catch (e) {
     console.error("Unban failed:", e.message);
-    return fail(res, 500, "Failed to unban user: " + friendlyFirestoreError(e));
+    return fail(res, 500, "Failed to unban user");
   }
 });
 
