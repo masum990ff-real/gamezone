@@ -95,7 +95,7 @@ const Api = (() => {
         method: "PUT",
         body: JSON.stringify({ zapKey }),
       }),
-    getCategories: () => fetch("/api/categories").then((r) => r.json()).then((b) => { if (!b.success) throw new Error(b.message); return b.data; }),
+    getCategories: () => request("/api/categories"),
     addCategory: (name, img) =>
       request("/api/categories", { method: "POST", body: JSON.stringify({ name, img }) }),
     updateCategory: (id, name, img) =>
@@ -106,17 +106,17 @@ const Api = (() => {
       if (categoryId) p.set("categoryId", categoryId);
       if (status) p.set("status", status);
       const q = p.toString() ? "?" + p.toString() : "";
-      return fetch("/api/matches" + q).then((r) => r.json()).then((b) => { if (!b.success) throw new Error(b.message); return b.data; });
+      return request("/api/matches" + q);
     },
-    getMatch: (id) => fetch(`/api/matches/${id}`).then((r) => r.json()).then((b) => { if (!b.success) throw new Error(b.message); return b.data; }),
+    getMatch: (id) => request(`/api/matches/${id}`),
     createMatch: (payload) => request("/api/matches", { method: "POST", body: JSON.stringify(payload) }),
     updateMatch: (id, payload) => request(`/api/matches/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
     deleteMatch: (id) => request(`/api/matches/${id}`, { method: "DELETE" }),
-    getParticipants: (id) => fetch(`/api/matches/${id}/participants`).then((r)=>r.json()).then((b)=>{ if(!b.success) throw new Error(b.message); return b.data;}),
+    getParticipants: (id) => request(`/api/matches/${id}/participants`),
     updateMatchStatus: (id,status,extra) => request(`/api/matches/${id}/status`,{method:"PUT",body:JSON.stringify(Object.assign({status},extra||{}))}),
     getWithdrawals: (page,limit) => request(`/api/withdrawals?page=${page||1}&limit=${limit||20}`),
     updateWithdraw: (id,action) => request(`/api/withdrawals/${id}/status`,{method:"PUT",body:JSON.stringify({action})}),
-    getLeaderboard: (period) => fetch(`/api/leaderboard?period=${period||"fulltime"}`).then(r=>r.json()).then(b=>{ if(!b.success) throw new Error(b.message); return b.data; }),
+    getLeaderboard: (period) => request(`/api/leaderboard?period=${period||"fulltime"}`),
     getStaffs: () => request("/api/staff"),
     createStaff: (email,password,permissions) => request("/api/staff",{method:"POST",body:JSON.stringify({email,password,permissions})}),
     deleteStaff: (id) => request(`/api/staff/${id}`,{method:"DELETE"}),
