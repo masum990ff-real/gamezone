@@ -47,3 +47,4 @@ router.put("/", authMiddleware, async (req, res) => {
 });
 
 module.exports = router;
+
