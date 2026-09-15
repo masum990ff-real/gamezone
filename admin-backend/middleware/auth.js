@@ -26,7 +26,7 @@ function requirePermission(perm) {
     const adminEmail = String(process.env.ADMIN_EMAIL || "").toLowerCase();
     if (email && adminEmail && email === adminEmail) return next();
     if (req.admin && req.admin.role === "main") return next();
-    if (!req.admin || !req.admin.permissions) return next();
+    if (!req.admin || !req.admin.permissions) return fail(res, 403, "Forbidden: missing permission " + perm);
     const perms = Array.isArray(req.admin.permissions) ? req.admin.permissions : [];
     if (perms.includes(perm) || perms.includes("*") || perms.includes("all")) return next();
     return fail(res, 403, "Forbidden: missing permission " + perm);
