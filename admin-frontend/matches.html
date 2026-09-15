@@ -137,11 +137,17 @@ function statusPill(s){const l=String(s||"").toLowerCase();if(l==="ongoing") ret
    const fcat=document.getElementById("filterCategory");
    sel.innerHTML=cats.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("")||'<option value="">No categories</option>';
    fcat.innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
-   const chips=document.getElementById("categoryChips");
-   if(chips){
-     const cur=document.getElementById("filterCategory").value;
-     chips.innerHTML='<button onclick="filterByCat(\'\')" class="px-4 py-2 rounded-full text-xs font-bold '+(cur===''?'bg-violet-600 text-white chip-active':'bg-white border border-violet-200 text-violet-700 hover:bg-violet-50')+'">All</button>'+cats.map(c=>`<button onclick="filterByCat('${c.id}')" class="px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1 '+(cur===c.id?'bg-violet-600 text-white chip-active':'bg-white border border-violet-200 text-violet-700 hover:bg-violet-50')+'">${escapeHtml(c.name)} <span onclick="event.stopPropagation();organizeCat('${c.id}')" class="ml-1 bg-violet-100 text-violet-700 rounded-full px-1.5 py-0.5 text-[10px]">↕</span></button>`).join("");
-   }
+    const chips=document.getElementById("categoryChips");
+    if(chips){
+      const cur=document.getElementById("filterCategory").value;
+      chips.innerHTML='<button data-cat="" class="cat-chip px-4 py-2 rounded-full text-xs font-bold '+(cur===''?'bg-violet-600 text-white chip-active':'bg-white border border-violet-200 text-violet-700 hover:bg-violet-50')+'">All</button>'+cats.map(c=>`<button data-cat="${escapeHtml(c.id)}" class="cat-chip px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1 '+(cur===c.id?'bg-violet-600 text-white chip-active':'bg-white border border-violet-200 text-violet-700 hover:bg-violet-50')+'">${escapeHtml(c.name)} <span data-action="organize" data-cat="${escapeHtml(c.id)}" class="cat-organize ml-1 bg-violet-100 text-violet-700 rounded-full px-1.5 py-0.5 text-[10px]">↕</span></button>`).join("");
+      chips.addEventListener("click",(e)=>{
+        const org=e.target.closest(".cat-organize");
+        if(org){e.stopPropagation();organizeCat(org.dataset.cat);return;}
+        const chip=e.target.closest(".cat-chip");
+        if(chip) filterByCat(chip.dataset.cat);
+      });
+    }
   }catch(e){showError(e.message);}
  }
  function filterByCat(id){document.getElementById("filterCategory").value=id; loadCategories(); loadMatches();}
@@ -179,20 +185,20 @@ async function loadMatches(){
   const data=await Api.getMatches(cat||undefined, st||undefined);
   const list=data.matches||[];
   document.getElementById("countInfo").textContent=list.length+" matches";
-  document.getElementById("rows").innerHTML=list.map(m=>`
-   <tr class="hover:bg-violet-50/60 transition">
-    <td class="px-5 py-3.5"><img src="${escapeHtml(m.bannerUrl)}" alt="" class="w-14 h-10 rounded-xl object-cover border border-violet-100" onerror="this.style.display='none'" /></td>
-    <td class="px-5 py-3.5 font-bold text-xs max-w-[220px] truncate">${escapeHtml(m.title)}<div class="text-[11px] text-slate-400 font-normal">#${escapeHtml(m.matchNumber)}</div></td>
-    <td class="px-5 py-3.5 text-xs">${escapeHtml(m.categoryName||m.categoryId)}</td>
-    <td class="px-5 py-3.5 text-xs whitespace-nowrap">${escapeHtml(fmtTime(m.timeDate))}</td>
-    <td class="px-5 py-3.5">${statusPill(m.status)}</td>
-     <td class="px-5 py-3.5 text-right space-x-1">
-      <button onclick="viewMatch('${m.id}')" class="bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">View</button>
-      <button onclick="editMatch('${m.id}')" class="bg-violet-500 hover:bg-violet-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">Edit</button>
-      <button onclick="openStatusModal('${m.id}','${m.status||'upcoming'}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">Status</button>
-      <button onclick="delMatch('${m.id}')" class="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">Delete</button>
-     </td>
-   </tr>`).join("")||`<tr><td colspan="6" class="px-5 py-8 text-center text-sm text-slate-400">No matches yet</td></tr>`;
+   document.getElementById("rows").innerHTML=list.map(m=>`
+    <tr class="hover:bg-violet-50/60 transition">
+     <td class="px-5 py-3.5"><img src="${escapeHtml(m.bannerUrl)}" alt="" class="w-14 h-10 rounded-xl object-cover border border-violet-100" onerror="this.style.display='none'" /></td>
+     <td class="px-5 py-3.5 font-bold text-xs max-w-[220px] truncate">${escapeHtml(m.title)}<div class="text-[11px] text-slate-400 font-normal">#${escapeHtml(m.matchNumber)}</div></td>
+     <td class="px-5 py-3.5 text-xs">${escapeHtml(m.categoryName||m.categoryId)}</td>
+     <td class="px-5 py-3.5 text-xs whitespace-nowrap">${escapeHtml(fmtTime(m.timeDate))}</td>
+     <td class="px-5 py-3.5">${statusPill(m.status)}</td>
+      <td class="px-5 py-3.5 text-right space-x-1">
+       <button data-action="view" data-id="${escapeHtml(m.id)}" class="match-btn bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">View</button>
+       <button data-action="edit" data-id="${escapeHtml(m.id)}" class="match-btn bg-violet-500 hover:bg-violet-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">Edit</button>
+       <button data-action="status" data-id="${escapeHtml(m.id)}" data-status="${escapeHtml(m.status||'upcoming')}" class="match-btn bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">Status</button>
+       <button data-action="delete" data-id="${escapeHtml(m.id)}" class="match-btn bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">Delete</button>
+      </td>
+    </tr>`).join("")||`<tr><td colspan="6" class="px-5 py-8 text-center text-sm text-slate-400">No matches yet</td></tr>`;
  }catch(e){document.getElementById("rows").innerHTML="";showError(e.message);}
 }
 let ongoingMatchId=null;
@@ -404,6 +410,16 @@ document.getElementById("retryBtn").addEventListener("click",loadMatches);
      b.className='tab-btn active bg-violet-600 text-white px-4 py-2 rounded-full text-xs font-bold';
      loadMatches();
    });
+ });
+ document.getElementById("rows").addEventListener("click",(e)=>{
+  const btn=e.target.closest(".match-btn");
+  if(!btn) return;
+  const action=btn.dataset.action;
+  const id=btn.dataset.id;
+  if(action==="view") viewMatch(id);
+  else if(action==="edit") editMatch(id);
+  else if(action==="status") openStatusModal(id,btn.dataset.status);
+  else if(action==="delete") delMatch(id);
  });
  loadCategories().then(loadMatches);
 </script>
