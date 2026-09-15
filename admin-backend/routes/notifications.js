@@ -37,7 +37,7 @@ router.post("/send", authMiddleware, sendLimiter, async (req, res) => {
       messageId = await messaging.send(message);
     } catch (e) {
       console.error("FCM send failed:", e.message);
-      return fail(res, 500, "FCM send failed: " + e.message);
+      return fail(res, 500, "FCM send failed");
     }
 
     const db = getDb();
@@ -62,7 +62,7 @@ router.post("/send", authMiddleware, sendLimiter, async (req, res) => {
     }
   } catch (e) {
     console.error("Send error:", e.message);
-    return fail(res, 500, "Failed to send notification: " + e.message);
+    return fail(res, 500, "Failed to send notification");
   }
 });
 
