@@ -1,11 +1,11 @@
 const express = require("express");
 const { getDb, getApp, friendlyFirestoreError } = require("../config/firebase");
-const { ok, fail, authMiddleware } = require("../middleware/auth");
+const { ok, fail, authMiddleware, firebaseAuthMiddleware } = require("../middleware/auth");
 const { registerLimiter } = require("../middleware/rateLimit");
 
 const router = express.Router();
 
-router.post("/register-token", registerLimiter, async (req, res) => {
+router.post("/register-token", registerLimiter, firebaseAuthMiddleware, async (req, res) => {
   try {
     const { token, deviceInfo } = req.body || {};
     if (!token || typeof token !== "string" || token.length < 20 || token.length > 500) {
@@ -44,7 +44,7 @@ router.post("/register-token", registerLimiter, async (req, res) => {
     return ok(res, {}, "Token registered");
   } catch (e) {
     console.error("Token register failed:", e.message);
-    return fail(res, 500, "Failed to register token: " + friendlyFirestoreError(e));
+    return fail(res, 500, "Failed to register token");
   }
 });
 
