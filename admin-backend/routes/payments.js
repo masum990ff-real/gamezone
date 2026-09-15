@@ -94,10 +94,14 @@ async function creditIfLivePaid(rtdb, orderId, uid, confirmed, fallbackEnv, fall
     try {
       const s = await recRef.get();
       if (s.exists() && s.val() && s.val().credited === true) keepCredited = true;
-    } catch (e) {}
+    } catch (e) {
+      console.error("creditIfLivePaid: failed to read credited status order=" + orderId, e.message);
+    }
     try {
       await recRef.update({ status: "success", txn_id: txn, utr: utr, updatedAt: now, credited: keepCredited ? true : false });
-    } catch (e) {}
+    } catch (e) {
+      console.error("creditIfLivePaid: failed to update test payment order=" + orderId, e.message);
+    }
     return "success";
   }
   let toCredit = 0;
@@ -113,7 +117,9 @@ async function creditIfLivePaid(rtdb, orderId, uid, confirmed, fallbackEnv, fall
       cur.credited = true;
       return cur;
     });
-  } catch (e) {}
+  } catch (e) {
+    console.error("creditIfLivePaid: RTDB transaction failed order=" + orderId, e.message);
+  }
   if (toCredit > 0) {
     try {
       await getDb().collection("users").doc(uid).update({
@@ -127,7 +133,9 @@ async function creditIfLivePaid(rtdb, orderId, uid, confirmed, fallbackEnv, fall
   try {
     const snap = await recRef.get();
     if (snap.exists()) return String((snap.val() || {}).status || "success");
-  } catch (e) {}
+  } catch (e) {
+    console.error("creditIfLivePaid: failed to read final status order=" + orderId, e.message);
+  }
   return "success";
 }
 
@@ -220,7 +228,9 @@ router.post("/create-order", firebaseAuthMiddleware, payLimiter, async (req, res
           if (gatewayLocalStatus(gs) === "failed") {
             try {
               await rtdb.ref("payments/byUid/" + uid + "/" + orderId).update({ status: "failed", updatedAt: now });
-            } catch (e) {}
+  } catch (e) {
+    console.error("markDisplaySuccess failed:", orderId, e.message);
+  }
             return ok(res, { payment_url: "", order_id: orderId, recovered: true, status: "failed" }, "");
           }
           return ok(res, { payment_url: "", order_id: orderId, recovered: true, status: "pending" }, "");
