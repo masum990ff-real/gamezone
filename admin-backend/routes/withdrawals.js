@@ -1,8 +1,8 @@
 const express = require("express");
 const { FieldValue } = require("firebase-admin/firestore");
 const { getDb, friendlyFirestoreError } = require("../config/firebase");
-const { ok, fail, authMiddleware, firebaseAuthMiddleware } = require("../middleware/auth");
-const { payLimiter } = require("../middleware/rateLimit");
+const { ok, fail, authMiddleware, requirePermission, firebaseAuthMiddleware } = require("../middleware/auth");
+const { payLimiter, withdrawLimiter } = require("../middleware/rateLimit");
 const router = express.Router();
 const ALLOWED_AMOUNTS = [50,60,70,80,100,150,200,250,500];
 const ALLOWED_METHODS = ["Paytm","PhonePe","GooglePe"];
@@ -56,7 +56,7 @@ router.get("/my", firebaseAuthMiddleware, async (req,res)=>{
   return ok(res,{items},"");
  }catch(e){ return fail(res,500,"Failed");}
 });
-router.get("/", authMiddleware, async (req,res)=>{
+router.get("/", authMiddleware, requirePermission("withdrawals"), withdrawLimiter, async (req,res)=>{
  try{
   const page=Math.max(1,parseInt(req.query.page)||1);
   const limit=Math.min(50,Math.max(1,parseInt(req.query.limit)||20));
@@ -71,7 +71,7 @@ router.get("/", authMiddleware, async (req,res)=>{
   return ok(res,{items,page,limit,total,totalPages:Math.ceil(total/limit)},"");
  }catch(e){ console.error("Withdraw list failed:",e.message); return fail(res,500,"Failed");}
 });
-router.put("/:id/status", authMiddleware, async (req,res)=>{
+router.put("/:id/status", authMiddleware, requirePermission("withdrawals"), withdrawLimiter, async (req,res)=>{
  try{
   const id=String(req.params.id||"").trim();
   const action=String(req.body && req.body.action||"").trim().toLowerCase();
