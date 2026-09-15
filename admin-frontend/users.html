@@ -151,8 +151,8 @@ async function load() {
         </td>
         <td class="px-5 py-3.5 text-right">
           ${u.banned
-            ? `<button onclick="unban('${u.uid}')" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl px-4 py-2 transition">Unban</button>`
-            : `<button onclick="ban('${u.uid}')" class="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl px-4 py-2 transition">Ban</button>`}
+            ? `<button data-action="unban" data-uid="${escapeHtml(u.uid)}" class="user-btn bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl px-4 py-2 transition">Unban</button>`
+            : `<button data-action="ban" data-uid="${escapeHtml(u.uid)}" class="user-btn bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl px-4 py-2 transition">Ban</button>`}
         </td>
       </tr>`).join("") || `<tr><td colspan="4" class="px-5 py-8 text-center text-sm text-slate-400">No users yet — accounts appear after first signup</td></tr>`;
     document.getElementById("prevBtn").disabled = page <= 1;
@@ -175,6 +175,14 @@ async function unban(uid) {
     load();
   } catch (e) { showError(e.message); }
 }
+document.getElementById("rows").addEventListener("click",(e)=>{
+  const btn=e.target.closest(".user-btn");
+  if(!btn) return;
+  const action=btn.dataset.action;
+  const uid=btn.dataset.uid;
+  if(action==="ban") ban(uid);
+  else if(action==="unban") unban(uid);
+});
 document.getElementById("refreshBtn").addEventListener("click", load);
 document.getElementById("searchBtn").addEventListener("click", () => { query = document.getElementById("searchInput").value.trim(); page = 1; load(); });
 document.getElementById("clearBtn").addEventListener("click", () => { document.getElementById("searchInput").value = ""; query = ""; page = 1; load(); });
