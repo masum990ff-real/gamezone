@@ -111,15 +111,15 @@ async function load(){
   const data=await Api.getCategories();
   const list=data.categories||[];
   document.getElementById("countInfo").textContent=list.length+"/15 categories";
-  document.getElementById("rows").innerHTML=list.map(c=>`
-   <tr class="hover:bg-violet-50/60 transition">
-     <td class="px-5 py-3.5"><img src="${escapeHtml(c.img)}" alt="" class="w-14 h-14 rounded-xl object-cover border border-violet-100" onerror="this.src='/css/premium.css'" /></td>
-     <td class="px-5 py-3.5 font-bold">${escapeHtml(c.name)}</td>
-     <td class="px-5 py-3.5 text-right space-x-2">
-       <button onclick="editCat('${c.id}','${escapeHtml(c.name).replace(/'/g,"\\'")}','${escapeHtml(c.img).replace(/'/g,"\\'")}')" class="bg-violet-500 hover:bg-violet-600 text-white text-xs font-bold rounded-xl px-4 py-2">Edit</button>
-       <button onclick="delCat('${c.id}')" class="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl px-4 py-2">Delete</button>
-     </td>
-   </tr>`).join("")||`<tr><td colspan="3" class="px-5 py-8 text-center text-sm text-slate-400">No categories yet — add your first one</td></tr>`;
+   document.getElementById("rows").innerHTML=list.map(c=>`
+    <tr class="hover:bg-violet-50/60 transition">
+      <td class="px-5 py-3.5"><img src="${escapeHtml(c.img)}" alt="" class="w-14 h-14 rounded-xl object-cover border border-violet-100" onerror="this.src='/css/premium.css'" /></td>
+      <td class="px-5 py-3.5 font-bold">${escapeHtml(c.name)}</td>
+      <td class="px-5 py-3.5 text-right space-x-2">
+        <button data-action="edit" data-id="${escapeHtml(c.id)}" data-name="${escapeHtml(c.name)}" data-img="${escapeHtml(c.img)}" class="cat-btn bg-violet-500 hover:bg-violet-600 text-white text-xs font-bold rounded-xl px-4 py-2">Edit</button>
+        <button data-action="delete" data-id="${escapeHtml(c.id)}" class="cat-btn bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl px-4 py-2">Delete</button>
+      </td>
+    </tr>`).join("")||`<tr><td colspan="3" class="px-5 py-8 text-center text-sm text-slate-400">No categories yet — add your first one</td></tr>`;
  }catch(e){document.getElementById("rows").innerHTML="";showError(e.message);}
 }
 async function delCat(id){
@@ -133,6 +133,14 @@ async function editCat(id,oldName,oldImg){
  if(img===null) return;
  try{await Api.updateCategory(id,name.trim(),img.trim());showToast("Updated",true);load();}catch(e){showToast(e.message,false);}
 }
+document.getElementById("rows").addEventListener("click",(e)=>{
+ const btn=e.target.closest(".cat-btn");
+ if(!btn) return;
+ const action=btn.dataset.action;
+ const id=btn.dataset.id;
+ if(action==="delete") delCat(id);
+ else if(action==="edit") editCat(id,btn.dataset.name,btn.dataset.img);
+});
 document.getElementById("addForm").addEventListener("submit",async(e)=>{
  e.preventDefault();
  const name=document.getElementById("addName").value.trim();
