@@ -2,11 +2,12 @@ const express=require("express");
 const bcrypt=require("bcryptjs");
 const {getDb}=require("../config/firebase");
 const {ok,fail,authMiddleware,requirePermission}=require("../middleware/auth");
+const {userListLimiter}=require("../middleware/rateLimit");
 const router=express.Router();
 const PERMS=["dashboard","send_notification","history","users","categories","matches","settings","payment-config","deposits","withdrawals","staff"];
 function validEmail(e){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim());}
 function cleanPerms(p){ if(!Array.isArray(p)) return []; return [...new Set(p.map(x=>String(x).trim().toLowerCase()).filter(x=>PERMS.includes(x)))]; }
-router.get("/",authMiddleware,requirePermission("staff"),async(req,res)=>{
+router.get("/",authMiddleware,requirePermission("staff"),userListLimiter,async(req,res)=>{
  try{
   const snap=await getDb().collection("staffs").get();
   const list=snap.docs.map(d=>{const v=d.data()||{};return{id:d.id,email:v.email,permissions:v.permissions||[],createdAt:v.createdAt||""};});
