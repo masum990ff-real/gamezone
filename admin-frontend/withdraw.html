@@ -62,12 +62,12 @@ async function load(){
   const tbody=document.getElementById("tbody");
   if(items.length===0){ tbody.innerHTML='<tr><td colspan="8" class="text-center py-8 text-slate-400">No withdrawals</td></tr>'; }
   else{
-   tbody.innerHTML=items.map(it=>{
-    const status=it.status||"pending";
-    const pill=status==="success"?"bg-emerald-100 text-emerald-700":status==="rejected"?"bg-rose-100 text-rose-700":"bg-amber-100 text-amber-700";
-    const actions=status==="pending"?`<button onclick="act('${it.id}','approve')" class="px-3 py-1 rounded-lg bg-emerald-600 text-white text-xs mr-1">Approve</button><button onclick="act('${it.id}','reject')" class="px-3 py-1 rounded-lg bg-rose-600 text-white text-xs">Reject</button>`:"-";
-    return `<tr class="border-t"><td class="py-2 px-3 text-xs">${esc((it.createdAt||"").slice(0,16))}</td><td class="py-2 px-3">${esc(it.username||it.uid||"")}</td><td class="py-2 px-3 text-xs">${esc(it.email||"")}</td><td class="py-2 px-3 text-xs">${esc(it.upiId||"")}</td><td class="py-2 px-3 font-bold">₹${it.amount||0}</td><td class="py-2 px-3">${esc(it.method||"")}</td><td class="py-2 px-3"><span class="px-2 py-1 rounded-full text-xs ${pill}">${esc(status)}</span></td><td class="py-2 px-3">${actions}</td></tr>`;
-   }).join("");
+    tbody.innerHTML=items.map(it=>{
+     const status=it.status||"pending";
+     const pill=status==="success"?"bg-emerald-100 text-emerald-700":status==="rejected"?"bg-rose-100 text-rose-700":"bg-amber-100 text-amber-700";
+     const actions=status==="pending"?`<button data-action="approve" data-id="${esc(it.id)}" class="wd-btn px-3 py-1 rounded-lg bg-emerald-600 text-white text-xs mr-1">Approve</button><button data-action="reject" data-id="${esc(it.id)}" class="wd-btn px-3 py-1 rounded-lg bg-rose-600 text-white text-xs">Reject</button>`:"-";
+     return `<tr class="border-t"><td class="py-2 px-3 text-xs">${esc((it.createdAt||"").slice(0,16))}</td><td class="py-2 px-3">${esc(it.username||it.uid||"")}</td><td class="py-2 px-3 text-xs">${esc(it.email||"")}</td><td class="py-2 px-3 text-xs">${esc(it.upiId||"")}</td><td class="py-2 px-3 font-bold">₹${it.amount||0}</td><td class="py-2 px-3">${esc(it.method||"")}</td><td class="py-2 px-3"><span class="px-2 py-1 rounded-full text-xs ${pill}">${esc(status)}</span></td><td class="py-2 px-3">${actions}</td></tr>`;
+    }).join("");
   }
   document.getElementById("pageInfo").textContent=`Page ${data.page||page} / ${data.totalPages||1} • Total ${data.total||0}`;
  }catch(e){ document.getElementById("tbody").innerHTML='<tr><td colspan="8" class="text-center py-8 text-rose-500">'+esc(e.message)+'</td></tr>'; }
@@ -76,6 +76,11 @@ async function act(id,action){
  if(!confirm(action==="approve"?"Approve this withdrawal?":"Reject and refund winCoins?")) return;
  try{ await Api.updateWithdraw(id,action); showToast(action==="approve"?"Approved":"Rejected & refunded",true); load(); }catch(e){ showToast(e.message,false); }
 }
+document.getElementById("tbody").addEventListener("click",(e)=>{
+ const btn=e.target.closest(".wd-btn");
+ if(!btn) return;
+ act(btn.dataset.id,btn.dataset.action);
+});
 document.getElementById("prev").addEventListener("click",()=>{ if(page>1){ page--; load(); }});
 document.getElementById("next").addEventListener("click",()=>{ page++; load(); });
 load();
