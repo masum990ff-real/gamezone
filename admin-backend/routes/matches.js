@@ -206,7 +206,7 @@ router.post("/:id/join",firebaseAuthMiddleware,catLimiter,async(req,res)=>{
   if(!slotCount) slotCount=namesArr.length||1;
   if(slotCount<lim.min||slotCount>lim.max) return fail(res,400,`Slots must be ${lim.min}-${lim.max} for ${teamType}`);
   if(namesArr.length && namesArr.length!==slotCount) return fail(res,400,"inGameNames count must match slots");
-  for(const n of namesArr){if(!String(n||"").trim() || String(n).trim().length<2) return fail(res,400,"Player name 2+ chars");}
+  for(const n of namesArr){if(!String(n||"").trim() || String(n).trim().length<2 || String(n).trim().length>30) return fail(res,400,"Player name 2-30 chars");}
   const selectedSlots=slotsArr.length?slotsArr.map(s=>Number(s)).filter(n=>Number.isInteger(n)&&n>=1&&n<=Number(m.slots||100)):Array.from({length:slotCount},(_,i)=>i+1);
   if(new Set(selectedSlots).size!==selectedSlots.length) return fail(res,400,"Duplicate slots");
   const existingParts=m.participants||{};
@@ -254,13 +254,15 @@ router.post("/:id/join",firebaseAuthMiddleware,catLimiter,async(req,res)=>{
     const histRef=db.collection("wallet_history").doc();
      t.set(histRef,{uid,matchId:id,matchTitle:m.title||"",title:m.title||"",matchNumber:m.matchNumber||"",type:"join",amount:totalFee,depositDeduct:ck.depositDeduct,bonusDeduct:ck.bonusDeduct,winDeduct:ck.winDeduct,slots:selectedSlots,inGameNames:namesArr,createdAt:now});
    }).catch(e=>{if(e.message==="INSUFFICIENT") throw e; throw e;});
-  const part={uid,username,inGameNames:namesArr.length?namesArr:Array(selectedSlots.length).fill(username),slots:selectedSlots,kills:0,winning:0,killsList:Array(selectedSlots.length).fill(0),winningList:Array(selectedSlots.length).fill(0),refundedList:Array(selectedSlots.length).fill(false),entryFeePaid:totalFee,createdAt:now,depositDeduct:ded.depositDeduct,bonusDeduct:ded.bonusDeduct,winDeduct:ded.winDeduct};
-  await getRtdb().ref(`matches/${id}/participants/${uid}`).set(part);
-  await getRtdb().ref(`matches/${id}`).update({filledSlots:filled+slotCount});
+   const part={uid,username,inGameNames:namesArr.length?namesArr:Array(selectedSlots.length).fill(username),slots:selectedSlots,kills:0,winning:0,killsList:Array(selectedSlots.length).fill(0),winningList:Array(selectedSlots.length).fill(0),refundedList:Array(selectedSlots.length).fill(false),entryFeePaid:totalFee,createdAt:now,depositDeduct:ded.depositDeduct,bonusDeduct:ded.bonusDeduct,winDeduct:ded.winDeduct};
+   const rtdbUpdates={};
+   rtdbUpdates[`matches/${id}/participants/${uid}`]=part;
+   rtdbUpdates[`matches/${id}/filledSlots`]=filled+slotCount;
+   await getRtdb().ref().update(rtdbUpdates);
   return ok(res,{joined:true,deduct:ded,totalFee},"Joined");
  }catch(e){
   if(e.message==="INSUFFICIENT") return fail(res,402,"Insufficient balance");
-  console.error("Join failed:",e.message); return fail(res,500,"Join failed: "+e.message);
+  console.error("Join failed:",e.message); return fail(res,500,"Join failed");
  }
 });
 router.put("/:id/status",authMiddleware,catLimiter,async(req,res)=>{
@@ -496,7 +498,7 @@ router.put("/:id/status",authMiddleware,catLimiter,async(req,res)=>{
           const wh=db.collection("wallet_history").doc();
           t.set(wh,{uid,matchId:id,type:"refund",amount:entryFeePer,gameName:gameName||"",slot,createdAt:now,matchTitle:m.title||"",title:m.title||"",matchNumber:m.matchNumber||""});
          });
-        }catch(e){}
+        }catch(e){console.error("refund failed",e.message);}
        }
        const merged={...data, kills, winning, refunded: refund?true:!!data.refunded};
      updates[key]=merged;
@@ -515,6 +517,6 @@ router.put("/:id/status",authMiddleware,catLimiter,async(req,res)=>{
    const fresh2=await rtdb.ref(`matches/${id}`).get();
    return ok(res,{id,...fresh2.val()},"Result saved");
   }
- }catch(e){console.error("status update failed",e.message);return fail(res,500,"Failed: "+e.message);}
+ }catch(e){console.error("status update failed",e.message);return fail(res,500,"Failed to update status");}
 });
 module.exports=router;
