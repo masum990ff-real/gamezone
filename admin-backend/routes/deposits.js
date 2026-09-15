@@ -30,7 +30,8 @@ router.get("/", authMiddleware, async (req, res) => {
       const one = await rtdb.ref("payments/byUid/" + onlyUid).get();
       if (one.exists()) collect(one);
     } else {
-      const snap = await rtdb.ref("payments/byUid").get();
+      // Load only recent payments across all users (max 200) instead of the full tree.
+      const snap = await rtdb.ref("payments/byUid").orderByKey().limitToLast(200).get();
       if (snap.exists()) snap.forEach(collect);
     }
     all.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
