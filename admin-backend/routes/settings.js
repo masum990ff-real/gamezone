@@ -22,6 +22,7 @@ function readSettings(rtdb) {
       about: v.about || "",
       privacy: v.privacy || "",
       terms: v.terms || "",
+      matchRules: v.matchRules || "",
       banners: banners,
     };
   });
@@ -33,13 +34,13 @@ router.get("/", async (req, res) => {
     return ok(res, data, "");
   } catch (e) {
     console.error("Settings load failed:", e.message);
-    return fail(res, 500, "Failed to load settings: " + (e.message || e));
+    return fail(res, 500, "Failed to load settings");
   }
 });
 
 router.put("/", authMiddleware, async (req, res) => {
   try {
-    const { supportUrl, announcement, rules, referCoins, downloadUrl, latestVersion, faq, about, privacy, terms, banners } = req.body || {};
+    const { supportUrl, announcement, rules, referCoins, downloadUrl, latestVersion, faq, about, privacy, terms, matchRules, banners } = req.body || {};
     if (supportUrl && !/^https:\/\/.+/i.test(supportUrl)) {
       return fail(res, 400, "Support link must start with https://");
     }
@@ -72,33 +73,37 @@ router.put("/", authMiddleware, async (req, res) => {
         cleanBanners.push({ img: img, link: link });
       }
     }
-    for (const [key, max] of [["faq", 5000], ["about", 5000], ["privacy", 5000], ["terms", 5000]]) {
+    for (const [key, max] of [["faq", 5000], ["about", 5000], ["privacy", 5000], ["terms", 5000], ["matchRules", 5000]]) {
       if (req.body[key] && req.body[key].length > max) {
         return fail(res, 400, key + " max " + max + " chars");
       }
     }
+    if (matchRules !== undefined && typeof matchRules !== "string") return fail(res, 400, "matchRules must be string");
     const rtdb = getRtdb();
+    const prev = await readSettings(rtdb);
+    function pick(k, v) { return v !== undefined ? v : prev[k]; }
     const update = {
-      supportUrl: supportUrl || "",
-      announcement: announcement || "",
-      rules: rules || "",
-      referCoins: coins,
-      downloadUrl: downloadUrl || "",
-      latestVersion: cleanVersion,
-      faq: faq || "",
-      about: about || "",
-      privacy: privacy || "",
-      terms: terms || "",
+      supportUrl: supportUrl !== undefined ? (supportUrl || "") : prev.supportUrl,
+      announcement: announcement !== undefined ? (announcement || "") : prev.announcement,
+      rules: rules !== undefined ? (rules || "") : prev.rules,
+      referCoins: req.body.referCoins !== undefined ? coins : prev.referCoins,
+      downloadUrl: downloadUrl !== undefined ? (downloadUrl || "") : prev.downloadUrl,
+      latestVersion: req.body.latestVersion !== undefined ? cleanVersion : prev.latestVersion,
+      faq: faq !== undefined ? (faq || "") : prev.faq,
+      about: about !== undefined ? (about || "") : prev.about,
+      privacy: privacy !== undefined ? (privacy || "") : prev.privacy,
+      terms: terms !== undefined ? (terms || "") : prev.terms,
+      matchRules: matchRules !== undefined ? (matchRules || "") : prev.matchRules,
       updatedAt: new Date().toISOString(),
       updatedBy: req.admin.email,
     };
-    if (banners !== undefined) update.banners = cleanBanners;
+    if (banners !== undefined) update.banners = cleanBanners; else update.banners = prev.banners;
     await rtdb.ref("settings/app").update(update);
     const data = await readSettings(rtdb);
     return ok(res, data, "Settings saved");
   } catch (e) {
     console.error("Settings save failed:", e.message);
-    return fail(res, 500, "Failed to save settings: " + (e.message || e));
+    return fail(res, 500, "Failed to save settings");
   }
 });
 
