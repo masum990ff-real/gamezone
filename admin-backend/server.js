@@ -8,7 +8,7 @@ const app = express();
 app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
 
-const origins = (process.env.CORS_ORIGINS || "http://localhost:3000").split(",");
+const origins = (process.env.CORS_ORIGINS || "http://localhost:3000").split(",").map(s => s.trim()).filter(Boolean);
 app.use(cors({ origin: origins }));
 app.use(express.json({ limit: "100kb" }));
 
